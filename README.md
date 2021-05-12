@@ -1,31 +1,49 @@
+Project developped in VS Code 1.56.1 and Windows 10 20H2
 # Activating the virtual environment
 
-For the creation of virtual environments (VE) miniconda 3.8 64 bit is used. You can download anaconda here: 
-https://docs.conda.io/en/latest/miniconda.html. Version 3.9 of Python is not currently supported by the latest release of Tensorflow. Do not use 32 bit version of miniconda.
+To avoid conflicts between dependencies it is recommended to use anaconda or miniconda
 
-After installing anaconda into your system follow the steps bellow to work in a virtual environment.
+- Download miniconda :
+https://docs.conda.io/en/latest/miniconda.html . I'm using version 3.8 64 bit
+Note: Version 3.9 of Python is not currently supported by Tensorflow 2.4.1. Do not use 32 bit version of miniconda. Tensorflow is only compatible with python 64 bit
 
-Creation of the VE:
+- Install it. 
+Note: https://stackoverflow.com/questions/44515769/conda-is-not-recognized-as-internal-or-external-command/51996934#51996934
+I added to the path the following to be able to work with VS code:
+C:\Users\Dell\miniconda3\Library\bin
+C:\Users\Dell\miniconda3\Scripts
+C:\Users\Dell\miniconda3\condabin
+
+To be able to detect Python 3.8.5 in CMD I removed previous Python version from path and added to the system variables path:
+C:\Users\Dell\miniconda3
+
+-Create a virtual environment in miniconda (similar to pipenv)
 ```
 conda create python=3.8 --name deep-ts
 ```
 
-Activating the VE:
+Activate the virtual environment:
 ```
-CALL conda.bat activate deep-ts
-or
 conda activate deep-ts
+or
+CALL conda.bat activate deep-ts
 ```
 
-Installing all the packages from the **requirements.txt** file to the virtual environment:
-```
-pip install -r requirements.txt
-```
+In VS Code select the Python interpreter inside the conda virtual environment as opposed to the local Python version (possibly not installed through conda)
+Command: Ctrl+Shift+P
+        Python: Select interpreter
+Note: https://code.visualstudio.com/docs/python/environments
+Verify that the VS Code settigs.json contains the following ""python.pythonPath": "C:\\Users\\WhateverYourUseris\\miniconda3\\envs\\deep-ts\\python.exe""
 
-If you are using Microsoft Visual Studio code there may be some additional pop ups indiciating that some packages should be installed (linter or ikernel).
+Install all the packages from the **dependency_versions.txt** file to the virtual environment:
+```
+pip install -r dependency_versions.txt
+```
+It will take a while and install many dependencies 
 
-In VS Code select the interpreter inside the conda VE
-https://code.visualstudio.com/docs/python/environments
+
+After this process is finished run pipeline.py
+
 
 # Time series data
 

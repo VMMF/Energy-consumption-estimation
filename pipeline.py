@@ -3,39 +3,45 @@ import matplotlib.pyplot as plt
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
-# Date wrangling
-from datetime import datetime, timedelta
 
-# Data wrangling
+from datetime import datetime, timedelta
 import pandas as pd 
 
 # The deep learning class
 from deep_model import DeepModelTS
 
-# Reading the configuration file
+# Reading the neural network parameters configuration file
 import yaml
 
 # Directory managment 
 import os
 
-# Reading the hyper parameters for the pipeline
-with open(f'{os.getcwd()}\\conf.yml') as file:
+# Reading the Deep Neural Network hyper parameters
+with open(f'{os.getcwd()}\\DNN_params.yml') as file:
     conf = yaml.load(file, Loader=yaml.FullLoader)
 
-# Reading the data 
-d = pd.read_csv('input/DAYTON_hourly.csv')
-d['Datetime'] = [datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in d['Datetime']]
+# Reading the data and creating datetime objects with it
+df = pd.read_csv('input/DAYTON_hourly.csv')
+df['Datetime'] = [datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in df['Datetime']] # data is in format : 2004-12-31 01:00:00
 
-# Making sure there are no duplicated data
-# If there are some duplicates we average the data during those duplicated days
-d = d.groupby('Datetime', as_index=False)['DAYTON_MW'].mean()
+# Eliminating possible duplicates in MW column (averaging them)
+df = df.groupby('Datetime', as_index=False)['DAYTON_MW'].mean()
+
+
+
+
+
+
+
+
+
 
 # Sorting the values
-d.sort_values('Datetime', inplace=True)
+df.sort_values('Datetime', inplace=True)
 
 # Initiating the class 
 deep_learner = DeepModelTS(
-    data=d, 
+    data=df, 
     Y_var='DAYTON_MW',
     lag=conf.get('lag'),
     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
@@ -53,7 +59,7 @@ yhat = deep_learner.predict()
 if len(yhat) > 0:
 
     # Constructing the forecast dataframe
-    fc = d.tail(len(yhat)).copy()
+    fc = df.tail(len(yhat)).copy()
     fc.reset_index(inplace=True)
     fc['forecast'] = yhat
 
@@ -75,7 +81,7 @@ if len(yhat) > 0:
 
 # Creating the model using full data and forecasting n steps ahead
 deep_learner = DeepModelTS(
-    data=d, 
+    data=df, 
     Y_var='DAYTON_MW',
     lag=24,
     LSTM_layer_depth=64,
@@ -92,7 +98,7 @@ yhat = deep_learner.predict_n_ahead(n_ahead)
 yhat = [y[0][0] for y in yhat]
 
 # Constructing the forecast dataframe
-fc = d.tail(400).copy() 
+fc = df.tail(400).copy() 
 fc['type'] = 'original'
 
 last_date = max(fc['Datetime'])
