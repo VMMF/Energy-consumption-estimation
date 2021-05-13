@@ -24,19 +24,10 @@ with open(f'{os.getcwd()}\\DNN_params.yml') as file:
 df = pd.read_csv('input/DAYTON_hourly.csv')
 df['Datetime'] = [datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in df['Datetime']] # data is in format : 2004-12-31 01:00:00
 
-# Eliminating possible duplicates in MW column (averaging them)
+# Averaging MW of possible duplicates in Datetime column, not using Datetime columns as new index, keeping 1,2,3...
 df = df.groupby('Datetime', as_index=False)['DAYTON_MW'].mean()
 
-
-
-
-
-
-
-
-
-
-# Sorting the values
+# Sorting the values by Datetime inside the same dataframe
 df.sort_values('Datetime', inplace=True)
 
 # Initiating the class 

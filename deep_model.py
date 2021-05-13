@@ -7,21 +7,11 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense
 
 
-class DeepModelTS():
+class DeepModelTS(object):
     """
     A class to create a deep time series model
     """
-    def __init__(
-        self, 
-        data: pd.DataFrame, 
-        Y_var: str,
-        lag: int,
-        LSTM_layer_depth: int, 
-        epochs=10, 
-        batch_size=256,
-        train_test_split=0
-    ):
-
+    def __init__(self,data: pd.DataFrame, Y_var: str,lag: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_test_split=0 ):
         self.data = data 
         self.Y_var = Y_var 
         self.lag = lag 
@@ -52,10 +42,7 @@ class DeepModelTS():
 
         return X, Y         
 
-    def create_data_for_NN(
-        self,
-        use_last_n=None
-        ):
+    def create_data_for_NN(self, use_last_n=None ):
         """
         A method to create data for the neural network model
         """
@@ -114,9 +101,7 @@ class DeepModelTS():
             })
 
         # Fitting the model 
-        model.fit(
-            **keras_dict
-        )
+        model.fit( **keras_dict )
 
         # Saving the model to the class 
         self.model = model
