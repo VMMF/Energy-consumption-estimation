@@ -44,15 +44,15 @@ deep_learner = DeepModelTS(
 model = deep_learner.LSTModel()
 
 # Making the prediction on the validation set
-# Only applicable if train_test_split in the conf.yml > 0
+# Only applicable if train_test_split in the DNN_params.yml > 0
 yhat = deep_learner.predict()
 
 if len(yhat) > 0:
 
     # Constructing the forecast dataframe
-    fc = df.tail(len(yhat)).copy()
-    fc.reset_index(inplace=True)
-    fc['forecast'] = yhat
+    fc = df.tail(len(yhat)).copy() # copying the last yhat rows from the data
+    fc.reset_index(inplace=True) # When we reset the index, the old index is added as a column, and a new sequential index is used
+    fc['forecast'] = yhat #creating a new forecast column
 
     # Ploting the forecasts
     plt.figure(figsize=(12, 8))
