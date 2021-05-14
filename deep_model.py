@@ -1,4 +1,5 @@
 # Data wrangling
+from numpy.core.numeric import False_
 import pandas as pd
 import numpy as np
 
@@ -45,6 +46,7 @@ class DeepModelTS(object):
     def create_data_for_NN(self, use_last_n=None ):
         """
         A method to create data for the neural network model
+        It separates train from test set (no model validation set for now)
         """
         # Extracting the main variable we want to model/forecast
         y = self.data[self.Y_var].tolist()
@@ -73,18 +75,19 @@ class DeepModelTS(object):
 
         return X_train, X_test, Y_train, Y_test
 
-    def LSTModel(self):
+    def LSTModel(self,compute_accuracy = False):
         """
         A method to fit the LSTM model 
+        Guide: https://machinelearningmastery.com/tutorial-first-neural-network-python-keras/
         """
         # Getting the data 
         X_train, X_test, Y_train, Y_test = self.create_data_for_NN()
 
         # Defining the model
-        model = Sequential()
+        model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
         model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.lag, 1)))
-        model.add(Dense(1))
-        model.compile(optimizer='adam', loss='mse')
+        model.add(Dense(1)) # fully-connected network structure, using linear activation 
+        model.compile(optimizer='adam', loss='mse') # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
 
         # Defining the model parameter dict 
         keras_dict = {
@@ -100,8 +103,14 @@ class DeepModelTS(object):
                 'validation_data': (X_test, Y_test)
             })
 
-        # Fitting the model 
+        # Training the model 
+        print("Training the model")
         model.fit( **keras_dict )
+
+        if compute_accuracy:
+            print("Computing accuracy")
+            loss, accuracy = model.evaluate(X_train, Y_train)
+            print('Accuracy: %.2f' % (accuracy*100))
 
         # Saving the model to the class 
         self.model = model

@@ -1,4 +1,5 @@
-train_test_split: 0.20
+train_test_split: 0.10
 lag: 24
 LSTM_layer_depth: 64
+batch_size: 256
 epochs: 1
