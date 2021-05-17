@@ -16,6 +16,9 @@ import yaml
 # Directory managment 
 import os
 
+# Data preprocessing
+from sklearn.preprocessing import MinMaxScaler
+
 # Reading the Deep Neural Network hyper parameters
 with open(f'{os.getcwd()}\\DNN_params.yml') as file:
     conf = yaml.load(file, Loader=yaml.FullLoader)
@@ -33,6 +36,14 @@ df = df.groupby('Datetime', as_index=False)[city_name].mean()
 # Sorting the values by Datetime inside the same dataframe
 df.sort_values('Datetime', inplace=True)
 
+# #TODO check data scaling
+# scaler = MinMaxScaler(feature_range=(0, 1))
+# scaler = scaler.fit(df.values)
+# normalized = scaler.transform(df.values)
+
+# plt.plot('Datetime',city_name,data = normalized)
+# plt.show()
+
 # Initiating the class 
 deep_learner = DeepModelTS(
     data=df, 
@@ -45,7 +56,11 @@ deep_learner = DeepModelTS(
 )
 
 # Fitting the model 
-model = deep_learner.LSTModel(compute_accuracy = True)
+_, history = deep_learner.LSTModel(return_metrics = True)
+plt.plot(history.history['loss'])
+plt.legend( ['mse'] )
+plt.title("Cost function")  
+plt.show()
 
 # Making the prediction on the validation set
 # Only applicable if train_test_split in the DNN_params.yml > 0

@@ -75,7 +75,7 @@ class DeepModelTS(object):
 
         return X_train, X_test, Y_train, Y_test
 
-    def LSTModel(self,compute_accuracy = False):
+    def LSTModel(self,return_metrics = False):
         """
         A method to fit the LSTM model 
         Guide: https://machinelearningmastery.com/tutorial-first-neural-network-python-keras/
@@ -87,7 +87,9 @@ class DeepModelTS(object):
         model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
         model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.lag, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation 
+        #TODO identify metrics
         model.compile(optimizer='adam', loss='mse') # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
+ 
 
         # Defining the model parameter dict 
         keras_dict = {
@@ -95,27 +97,24 @@ class DeepModelTS(object):
             'y': Y_train,
             'batch_size': self.batch_size,
             'epochs': self.epochs,
-            'shuffle': False
+            'shuffle': False #Don't shuffle the training data before each epoch
         }
 
         if self.train_test_split > 0:
-            keras_dict.update({
-                'validation_data': (X_test, Y_test)
-            })
+            keras_dict.update({ 'validation_data': (X_test, Y_test) })
 
         # Training the model 
+        print("\n")
         print("Training the model")
-        model.fit( **keras_dict )
-
-        if compute_accuracy:
-            print("Computing accuracy")
-            loss, accuracy = model.evaluate(X_train, Y_train)
-            print('Accuracy: %.2f' % (accuracy*100))
+        history = model.fit( **keras_dict )
 
         # Saving the model to the class 
         self.model = model
 
-        return model
+        if return_metrics:
+            return model, history
+        else:
+            return model
 
     def predict(self) -> list:
         """
