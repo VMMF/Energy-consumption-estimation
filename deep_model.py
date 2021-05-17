@@ -30,12 +30,13 @@ class DeepModelTS(object):
         X, Y = [], []
 
         if len(ts) - lag <= 0:
-            X.append(ts)
+            X.append(ts) # if not enough samples for the lag, use all the ones you have
         else:
             for i in range(len(ts) - lag):
-                Y.append(ts[i + lag])
-                X.append(ts[i:(i + lag)])
+                Y.append(ts[i + lag]) #start filling after lag samples
+                X.append(ts[i:(i + lag)]) # fill a buffer of lag samples
 
+        # each Y sample will have buffer of X samples
         X, Y = np.array(X), np.array(Y)
 
         # Reshaping the X array to an LSTM input shape 
@@ -85,6 +86,7 @@ class DeepModelTS(object):
 
         # Defining the model
         model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
+        
         model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.lag, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation 
         #TODO identify metrics

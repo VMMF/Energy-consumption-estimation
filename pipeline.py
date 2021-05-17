@@ -15,6 +15,7 @@ import yaml
 
 # Directory managment 
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force CPU use
 
 # Data preprocessing
 from sklearn.preprocessing import MinMaxScaler
@@ -23,15 +24,15 @@ from sklearn.preprocessing import MinMaxScaler
 with open(f'{os.getcwd()}\\DNN_params.yml') as file:
     conf = yaml.load(file, Loader=yaml.FullLoader)
 
-city_name = 'DAYTON_MW'
+city_name_MW = 'DAYTON_MW'
 
 # Reading the data from csv. The dataframe will contain one column per column in the csv
-df = pd.read_csv('input/' + str(city_name)+'.csv')
+df = pd.read_csv('input/' + str(city_name_MW)+'.csv')
 # creating Timestamp objects for array elements on the Datetime column
 df['Datetime'] = [datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in df['Datetime']] # data is in format : 2004-12-31 01:00:00
 
 # Averaging MW of possible duplicates in Datetime column, not using Datetime columns as new index, keeping 1,2,3...
-df = df.groupby('Datetime', as_index=False)[city_name].mean()
+df = df.groupby('Datetime', as_index=False)[city_name_MW].mean()
 
 # Sorting the values by Datetime inside the same dataframe
 df.sort_values('Datetime', inplace=True)
@@ -47,7 +48,7 @@ df.sort_values('Datetime', inplace=True)
 # Initiating the class 
 deep_learner = DeepModelTS(
     data=df, 
-    Y_var= city_name,
+    Y_var= city_name_MW,
     lag=conf.get('lag'),
     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
@@ -76,7 +77,7 @@ if len(yhat) > 0:
     # Ploting the forecasts
 
     plt.figure(figsize=(12, 8))
-    for dtype in [city_name, 'forecast']:
+    for dtype in [city_name_MW, 'forecast']:
         # the dataframe in fc has the column named Datetime used as x axis in plot
         # it also has the columns city_name and forecast used as y axis
         plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
@@ -91,7 +92,7 @@ if len(yhat) > 0:
 # Creating the model using full data and forecasting n steps ahead
 deep_learner = DeepModelTS(
     data=df, 
-    Y_var= city_name,
+    Y_var= city_name_MW,
     lag=conf.get('lag'),
     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
@@ -114,7 +115,7 @@ fc['type'] = 'original'
 last_date = max(fc['Datetime'])
 hat_frame = pd.DataFrame({
     'Datetime': [last_date + timedelta(hours=x + 1) for x in range(n_ahead)], 
-    city_name: yhat,
+    city_name_MW: yhat,
     'type': 'forecast'
 })
 
@@ -124,7 +125,7 @@ fc.reset_index(inplace=True, drop=True)
 # Ploting future values forecasts 
 plt.figure(figsize=(12, 8))
 for col_type in ['original', 'forecast']:
-    plt.plot('Datetime', city_name, data=fc[fc['type']==col_type], label=col_type )
+    plt.plot('Datetime', city_name_MW, data=fc[fc['type']==col_type], label=col_type )
 
 plt.title("Future values forecast") 
 plt.legend()

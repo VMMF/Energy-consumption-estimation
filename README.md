@@ -45,6 +45,9 @@ C:\Users\Dell\miniconda3\condabin
 To be able to detect Python 3.8.5 in CMD I removed previous Python version from path and added to the system variables path:
 C:\Users\Dell\miniconda3
 
+- Install GPU processing tools (optional)
+Note: https://www.tensorflow.org/install/gpu
+
 -Create a virtual environment in miniconda (similar to pipenv)
 ```
 conda create python=3.8 --name deep-ts
