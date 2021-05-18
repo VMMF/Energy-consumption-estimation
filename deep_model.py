@@ -33,10 +33,10 @@ class DeepModelTS(object):
             X.append(ts) # if not enough samples for the lag, use all the ones you have
         else:
             for i in range(len(ts) - lag):
-                Y.append(ts[i + lag]) #start filling after lag samples
-                X.append(ts[i:(i + lag)]) # fill a buffer of lag samples
+                Y.append(ts[i + lag]) #start filling after lag samples. Y is [len(ts) - lag] x 1
+                X.append(ts[i:(i + lag)]) # fill a buffer of lag samples. X is [len(ts) - lag] x lag
 
-        # each Y sample will have buffer of X samples
+        # each Y sample will have an X buffer of size "previous lag samples" associated to it
         X, Y = np.array(X), np.array(Y)
 
         # Reshaping the X array to an LSTM input shape 
