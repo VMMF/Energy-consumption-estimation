@@ -12,14 +12,14 @@ class DeepModelTS(object):
     """
     A class to create a deep time series model
     """
-    def __init__(self,data: pd.DataFrame, Y_var: str,lag: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_test_split=0 ):
+    def __init__(self,data: pd.DataFrame, Y_var: str,lag: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_validation_split=0 ):
         self.data = data 
         self.Y_var = Y_var 
         self.lag = lag 
         self.LSTM_layer_depth = LSTM_layer_depth
         self.batch_size = batch_size
         self.epochs = epochs
-        self.train_test_split = train_test_split
+        self.train_validation_split = train_validation_split
 
     @staticmethod
     def create_X_Y(ts: list, lag: int) -> tuple:
@@ -66,13 +66,13 @@ class DeepModelTS(object):
         Y_train = Y
         Y_test = []
 
-        if self.train_test_split > 0:
-            index = round(len(X) * self.train_test_split)
-            X_train = X[:(len(X) - index)]
-            X_test = X[-index:]     
+        if self.train_validation_split > 0:
+            index = round(len(X) * self.train_validation_split)
+            X_train = X[0:(len(X) - index)]
+            X_test = X[len(X_train):]     
             
             Y_train = Y[:(len(X) - index)]
-            Y_test = Y[-index:]
+            Y_test = Y[len(Y_train):]
 
         return X_train, X_test, Y_train, Y_test
 
@@ -102,7 +102,7 @@ class DeepModelTS(object):
             'shuffle': False #Don't shuffle the training data before each epoch
         }
 
-        if self.train_test_split > 0:
+        if self.train_validation_split > 0:
             keras_dict.update({ 'validation_data': (X_test, Y_test) })
 
         # Training the model 
@@ -120,11 +120,11 @@ class DeepModelTS(object):
 
     def predict(self) -> list:
         """
-        A method to predict using the test data used in creating the class
+        A method to predict using the validation data used in creating the class
         """
         yhat = []
 
-        if(self.train_test_split > 0):
+        if(self.train_validation_split > 0):
         
             # Getting the last n time series 
             _, X_test, _, _ = self.create_data_for_NN()        

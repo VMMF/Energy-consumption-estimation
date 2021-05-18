@@ -53,7 +53,7 @@ deep_learner = DeepModelTS(
     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
     epochs=conf.get('epochs'),
-    train_test_split=conf.get('train_test_split') # The share of data that will be used for validation
+    train_validation_split=conf.get('train_validation_split') # The share of data that will be used for validation
 )
 
 # Fitting the model 
@@ -64,7 +64,7 @@ plt.title("Cost function")
 plt.show()
 
 # Making the prediction on the validation set
-# Only applicable if train_test_split in the DNN_params.yml > 0
+# Only applicable if train_validation_split in the DNN_params.yml > 0
 yhat = deep_learner.predict()
 
 if len(yhat) > 0:
@@ -97,7 +97,7 @@ deep_learner = DeepModelTS(
     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
     epochs=conf.get('epochs'),
-    train_test_split=0 
+    train_validation_split=0 
 )
 
 # Fitting the model 
