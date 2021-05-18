@@ -39,7 +39,7 @@ class DeepModelTS(object):
         # each Y sample will have an X buffer of size "previous lag samples" associated to it
         X, Y = np.array(X), np.array(Y)
 
-        # Reshaping the X array to an LSTM input shape 
+        # Reshaping the X array to an LSTM input shape (numpy array necessary for model.predict())
         X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
         return X, Y         
@@ -47,7 +47,7 @@ class DeepModelTS(object):
     def create_data_for_NN(self, use_last_n=None ):
         """
         A method to create data for the neural network model
-        It separates train from test set (no model validation set for now)
+        It separates train from validation set (no model test set for now)
         """
         # Extracting the main variable we want to model/forecast
         y = self.data[self.Y_var].tolist()
@@ -118,9 +118,9 @@ class DeepModelTS(object):
         else:
             return model
 
-    def predict(self) -> list:
+    def validate(self) -> list:
         """
-        A method to predict using the validation data used in creating the class
+        A method to predict using the validation data used in creating the model
         """
         yhat = []
 

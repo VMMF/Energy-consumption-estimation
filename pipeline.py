@@ -65,7 +65,7 @@ plt.show()
 
 # Making the prediction on the validation set
 # Only applicable if train_validation_split in the DNN_params.yml > 0
-yhat = deep_learner.predict()
+yhat = deep_learner.validate()
 
 if len(yhat) > 0:
 
