@@ -47,19 +47,12 @@ plt.plot('Datetime',city_name_MW,data = df)
 plt.title("Total consumption (MW) per day") 
 plt.show()
 
-# #TODO check data scaling
-scaler = MinMaxScaler(feature_range=(0, 1))
-raw_MW = np.array ( df[city_name_MW].astype('float32') )
-raw_MW = raw_MW.reshape(raw_MW.shape[0], 1) #reshape operation is not in place
-normalized = scaler.fit_transform(raw_MW)
-df[city_name_MW] = normalized
+# Performing data scaling
+df[city_name_MW] = DeepModelTS.data_scale(df[city_name_MW])
 
-#TODO inversed = scaler.inverse_transform
-
-# # plt.plot(normalized)
-# plt.plot('Datetime', city_name_MW, data=df)
-# plt.title("Normalized total consumption (MW) per day")
-# plt.show()
+plt.plot('Datetime', city_name_MW, data=df)
+plt.title("Normalized total consumption (MW) per day")
+plt.show()
 
 # Initiating the class 
 deep_learner = DeepModelTS(
@@ -73,7 +66,8 @@ deep_learner = DeepModelTS(
 )
 
 # Fitting the model 
-_, history = deep_learner.LSTModel(return_metrics = True)
+deep_learner.CreateModel()
+history = deep_learner.train(return_metrics = True)
 plt.plot(history.history['loss'])
 plt.legend( ['mse'] )
 plt.title("Cost function")  
@@ -84,6 +78,10 @@ plt.show()
 yhat = deep_learner.validate()
 
 if len(yhat) > 0:
+
+    #rescaling data
+    yhat = DeepModelTS.data_scale(yhat, FWD= False)
+    df[city_name_MW] = DeepModelTS.data_scale(df[city_name_MW], FWD= False)
 
     # Constructing the forecast dataframe
     fc = df.tail(len(yhat)).copy() # copying the last yhat rows from the data
@@ -103,9 +101,10 @@ if len(yhat) > 0:
     plt.show()   
     
     
+    
 # Forecasting n steps ahead   
 
-# Creating the model using full data and forecasting n steps ahead
+# Creating a new model without validation set (full data) and forecasting n steps ahead
 deep_learner = DeepModelTS(
     data=df, 
     Y_var= city_name_MW,
@@ -117,7 +116,8 @@ deep_learner = DeepModelTS(
 )
 
 # Fitting the model 
-deep_learner.LSTModel()
+deep_learner.CreateModel()
+deep_learner.train()
 
 # Forecasting n steps ahead
 n_ahead = 168

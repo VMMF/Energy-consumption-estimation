@@ -7,11 +7,17 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
 
+# Data preprocessing
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.exceptions import NotFittedError
 
 class DeepModelTS(object):
     """
     A class to create a deep time series model
     """
+    #"static" class variable
+    _scaler = None
+
     def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_validation_split=0 ):
         self.data = data 
         self.Y_var = Y_var 
@@ -79,14 +85,14 @@ class DeepModelTS(object):
 
         return X_train, X_test, Y_train, Y_test
 
-    def LSTModel(self,return_metrics = False):
+
+    def CreateModel(self,return_metrics = False):
         """
-        A method to fit the LSTM model 
+        Creating an LSTM model 
+        TODO : Allow passing different model metrics
+        TODO : Create model should inherit from an abstract class that would be comon for many models
         Guide: https://machinelearningmastery.com/tutorial-first-neural-network-python-keras/
         """
-        # Getting the data 
-        X_train, X_test, Y_train, Y_test = self.create_data_for_NN()
-
         # Defining the model
         model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
         
@@ -96,6 +102,21 @@ class DeepModelTS(object):
         # acc and val_acc are only for classification
         model.compile(optimizer='adam', loss='mse') # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
+        # Saving the model to the class 
+        self.model = model
+
+        return model
+
+    def train(self,return_metrics = False):
+        """
+        Train should inherit from an abstract class. Each model would know the right way to train
+        Creating an LSTM model 
+        TODO : Allow passing different model metrics
+
+        """
+
+        # Getting the data 
+        X_train, X_test, Y_train, Y_test = self.create_data_for_NN()
 
         # Defining the model parameter dict 
         keras_dict = {
@@ -104,7 +125,7 @@ class DeepModelTS(object):
             'batch_size': self.batch_size,
             'epochs': self.epochs,
             'verbose': 2, # Decreasing verbosity level (0,2,1) accelerates training speed
-            'shuffle': False #Don't shuffle the training data before each epoch
+            'shuffle': False #Don't shuffle the training data before each epoch (bad for )
         }
 
         if self.train_validation_split > 0:
@@ -113,15 +134,13 @@ class DeepModelTS(object):
         # Training the model 
         print("\n")
         print("Training the model")
-        history = model.fit( **keras_dict )
-
-        # Saving the model to the class 
-        self.model = model
+        history = self.model.fit( **keras_dict )
 
         if return_metrics:
-            return model, history
-        else:
-            return model
+            return history
+
+
+
 
     def validate(self) -> list:
         """
@@ -132,7 +151,7 @@ class DeepModelTS(object):
         if(self.train_validation_split > 0):
         
             # Getting the last n time series 
-            _, X_test, _, _ = self.create_data_for_NN()        
+            _, X_test, _, _ = self.create_data_for_NN() #TODO consider storing X_test from previous call (inside train method)        
 
             # Making the prediction list 
             yhat = [y[0] for y in self.model.predict(X_test)]
@@ -163,3 +182,34 @@ class DeepModelTS(object):
             X = np.reshape(X, (1, len(X), 1))
 
         return yhat    
+
+
+    @staticmethod
+    def data_scale(city_name_MW,FWD = True):
+        """
+        A method to scale and de_scale data
+        city_name_MW is a pandas series
+        TODO: make sure de_scale is not called before scale
+        """   
+        
+        if FWD:
+            # scalling
+            DeepModelTS._scaler = MinMaxScaler(feature_range=(0, 1))
+            raw_MW = np.array ( city_name_MW.astype('float32') )
+            raw_MW = raw_MW.reshape(raw_MW.shape[0], 1) #reshape operation is not in place
+            scaled = DeepModelTS._scaler.fit_transform(raw_MW)
+            return scaled
+        else:
+            # scalling back
+            recons_MW = np.array ( city_name_MW )
+            recons_MW = recons_MW.reshape(recons_MW.shape[0], 1) #reshape operation is not in place
+            try:
+                de_scaled = DeepModelTS._scaler.inverse_transform(recons_MW)
+                return de_scaled
+            except NotFittedError as e:
+                print("\n")
+                print("Make sure to call this method with FWD = True, before calling it with FWD = False")
+                print(repr(e))
+                print("\n")
+            
+
