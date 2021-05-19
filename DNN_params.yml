@@ -1,5 +1,5 @@
 train_validation_split: 0.10
-lag: 24
+estimate_based_on: 24
 LSTM_layer_depth: 64
 batch_size: 256
 epochs: 1

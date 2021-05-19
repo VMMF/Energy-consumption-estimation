@@ -6,6 +6,7 @@ register_matplotlib_converters()
 
 from datetime import datetime, timedelta
 import pandas as pd 
+import numpy as np
 
 # The deep learning class
 from deep_model import DeepModelTS
@@ -28,8 +29,12 @@ city_name_MW = 'DAYTON_MW'
 
 # Reading the data from csv. The dataframe will contain one column per column in the csv
 df = pd.read_csv('input/' + str(city_name_MW)+'.csv')
+
 # creating Timestamp objects for array elements on the Datetime column
 df['Datetime'] = [datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in df['Datetime']] # data is in format : 2004-12-31 01:00:00
+
+#replacig any NA value with 0
+df[city_name_MW].fillna(0, inplace=True)
 
 # Averaging MW of possible duplicates in Datetime column, not using Datetime columns as new index, keeping 1,2,3...
 df = df.groupby('Datetime', as_index=False)[city_name_MW].mean()
@@ -37,19 +42,30 @@ df = df.groupby('Datetime', as_index=False)[city_name_MW].mean()
 # Sorting the values by Datetime inside the same dataframe
 df.sort_values('Datetime', inplace=True)
 
-# #TODO check data scaling
-# scaler = MinMaxScaler(feature_range=(0, 1))
-# scaler = scaler.fit(df.values)
-# normalized = scaler.transform(df.values)
+# Plotting dataset as reference
+plt.plot('Datetime',city_name_MW,data = df)
+plt.title("Total consumption (MW) per day") 
+plt.show()
 
-# plt.plot('Datetime',city_name,data = normalized)
+# #TODO check data scaling
+scaler = MinMaxScaler(feature_range=(0, 1))
+raw_MW = np.array ( df[city_name_MW].astype('float32') )
+raw_MW = raw_MW.reshape(raw_MW.shape[0], 1) #reshape operation is not in place
+normalized = scaler.fit_transform(raw_MW)
+df[city_name_MW] = normalized
+
+#TODO inversed = scaler.inverse_transform
+
+# # plt.plot(normalized)
+# plt.plot('Datetime', city_name_MW, data=df)
+# plt.title("Normalized total consumption (MW) per day")
 # plt.show()
 
 # Initiating the class 
 deep_learner = DeepModelTS(
     data=df, 
     Y_var= city_name_MW,
-    lag=conf.get('lag'),
+    estimate_based_on=conf.get('estimate_based_on'),
     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
     epochs=conf.get('epochs'),
@@ -93,7 +109,7 @@ if len(yhat) > 0:
 deep_learner = DeepModelTS(
     data=df, 
     Y_var= city_name_MW,
-    lag=conf.get('lag'),
+    estimate_based_on=conf.get('estimate_based_on'),
     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
     epochs=conf.get('epochs'),

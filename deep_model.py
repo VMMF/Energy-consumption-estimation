@@ -12,10 +12,10 @@ class DeepModelTS(object):
     """
     A class to create a deep time series model
     """
-    def __init__(self,data: pd.DataFrame, Y_var: str,lag: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_validation_split=0 ):
+    def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_validation_split=0 ):
         self.data = data 
         self.Y_var = Y_var 
-        self.lag = lag 
+        self.estimate_based_on = estimate_based_on 
         self.LSTM_layer_depth = LSTM_layer_depth
         self.batch_size = batch_size
         self.epochs = epochs
@@ -24,8 +24,9 @@ class DeepModelTS(object):
     @staticmethod
     def create_X_Y(ts: list, lag: int) -> tuple:
         """
-        A method to create X and Y matrix from a time series list for the training of 
-        deep learning models 
+        A method to create X and Y matrix from a time series. 
+        Before machine learning can be used, time series forecasting problems must be re-framed as supervised learning problems. 
+        From a sequence to pairs of input and output sequences.
         """
         X, Y = [], []
 
@@ -57,7 +58,7 @@ class DeepModelTS(object):
             y = y[-use_last_n:]
 
         # The X matrix will hold the lags of Y 
-        X, Y = self.create_X_Y(y, self.lag)
+        X, Y = self.create_X_Y(y, self.estimate_based_on)
 
         # Creating training and test sets 
         X_train = X
@@ -66,7 +67,9 @@ class DeepModelTS(object):
         Y_train = Y
         Y_test = []
 
+        #TODO consider model.validation_split or https://datascience.stackexchange.com/questions/38955/how-does-the-validation-split-parameter-of-keras-fit-function-work
         if self.train_validation_split > 0:
+
             index = round(len(X) * self.train_validation_split)
             X_train = X[0:(len(X) - index)]
             X_test = X[len(X_train):]     
@@ -87,9 +90,10 @@ class DeepModelTS(object):
         # Defining the model
         model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
         
-        model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.lag, 1)))
-        model.add(Dense(1)) # fully-connected network structure, using linear activation 
-        #TODO identify metrics
+        model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.estimate_based_on, 1)))
+        model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
+        #TODO add val_loss
+        # acc and val_acc are only for classification
         model.compile(optimizer='adam', loss='mse') # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
 
@@ -99,6 +103,7 @@ class DeepModelTS(object):
             'y': Y_train,
             'batch_size': self.batch_size,
             'epochs': self.epochs,
+            'verbose': 2, # Decreasing verbosity level (0,2,1) accelerates training speed
             'shuffle': False #Don't shuffle the training data before each epoch
         }
 
@@ -138,7 +143,7 @@ class DeepModelTS(object):
         """
         A method to predict n time steps ahead
         """    
-        X, _, _, _ = self.create_data_for_NN(use_last_n=self.lag)        
+        X, _, _, _ = self.create_data_for_NN(use_last_n=self.estimate_based_on)        
 
         # Making the prediction list 
         yhat = []
