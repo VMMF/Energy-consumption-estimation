@@ -42,8 +42,8 @@ class DeepModelTS(object):
             X.append(ts) # if not enough samples for the lag, use all the ones you have
         else:
             for i in range(len(ts) - lag):
-                Y.append(ts[i + lag]) #start filling after lag samples. Y is [len(ts) - lag] x 1
-                X.append(ts[i:(i + lag)]) # fill a buffer of lag samples. X is [len(ts) - lag] x lag
+                Y.append(ts[i + lag]) #start filling after the 1st lag samples. Y is [len(ts) - lag] x 1
+                X.append(ts[i:(i + lag)]) # fill buffers of lag samples. X is [len(ts) - lag] x lag
 
         # each Y sample will have an X buffer of size "previous lag samples" associated to it
         X, Y = np.array(X), np.array(Y)
@@ -63,7 +63,7 @@ class DeepModelTS(object):
 
         # Subseting the time series if needed
         if use_last_n is not None:
-            y = y[-use_last_n:]
+            y = y[-use_last_n:] #assume your time series are the last use_last_n only
 
         # The X matrix will hold the lags of Y 
         X, Y = self.create_X_Y(y, self.estimate_based_on)
@@ -99,7 +99,7 @@ class DeepModelTS(object):
         return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
 
-    def CreateModel(self,return_metrics = False):
+    def create_model(self,return_metrics = False):
         """
         Creating an LSTM model 
         TODO : Allow passing different model metrics
@@ -157,7 +157,7 @@ class DeepModelTS(object):
 
     def validate(self) -> list:
         """
-        A method to predict using the validation data used in creating the model
+        A method to predict the validation set used in creating the model
         """
         yhat = []
 
@@ -183,19 +183,20 @@ class DeepModelTS(object):
 
         # Making the prediction list 
         yhat = []
+        # yhat.append(X) # to avoid the gap between the end of the model and the start of the predictions in the plot
 
         for _ in range(n_ahead):
-            # Making the prediction
-            fc = self.model.predict(X)
+            # Predict 1 sample
+            fc = self.model.predict(X) # X is (1,estimate_based_on)
             yhat.append(fc)
 
-            # Creating a new input matrix for forecasting
+            # Putting it at the end of the buffer
             X = np.append(X, fc)
 
-            # Ommiting the first variable
+            # Eliminating the 1st sample in the buffer to keep it with dimensions (1,estimate_based_on)
             X = np.delete(X, 0)
 
-            # Reshaping for the next iteration
+            # Reshaping for compatibility with model.predict on the next iteration
             X = np.reshape(X, (1, len(X), 1))
 
         return yhat    

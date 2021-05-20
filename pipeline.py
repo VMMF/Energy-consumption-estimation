@@ -48,9 +48,11 @@ plt.plot('Datetime',city_name_MW,data = df)
 plt.title("Total consumption (MW) per day") 
 plt.draw()
 plt.pause(0.001) #avoid blocking thread while displaying image
+#TODO plot in another thread
 
 
 # Performing data scaling
+# TODO To prevent data leakage, do scaling only on training set
 df[city_name_MW] = DeepModelTS.data_scale(df[city_name_MW])
 
 # plt.plot('Datetime', city_name_MW, data=df)
@@ -69,7 +71,7 @@ deep_learner = DeepModelTS(
 )
 
 # Fitting the model 
-deep_learner.CreateModel()
+deep_learner.create_model()
 history = deep_learner.train(return_metrics = True)
 
 if(len(history.epoch)>1):
@@ -125,13 +127,13 @@ deep_learner = DeepModelTS(
 )
 
 # Fitting the model 
-deep_learner.CreateModel()
+deep_learner.create_model()
 deep_learner.train()
 
 # Forecasting n steps ahead
-n_ahead = 168
+n_ahead = 168 #TODO put this on a separate file
 yhat = deep_learner.predict_n_ahead(n_ahead)
-yhat = [y[0][0] for y in yhat]
+yhat = [y[0][0] for y in yhat] # TODO check yhat = np.squeeze(yhat)
 
 # Constructing the forecast dataframe
 fc = df.tail(400).copy() 
