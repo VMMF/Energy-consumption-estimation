@@ -6,6 +6,8 @@ import numpy as np
 # Deep learning: 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
+from keras import backend as K
+
 
 # Data preprocessing
 from sklearn.preprocessing import MinMaxScaler
@@ -85,6 +87,17 @@ class DeepModelTS(object):
 
         return X_train, X_test, Y_train, Y_test
 
+    @staticmethod
+    def rmse(y_true, y_pred):
+        """
+        A method to calculate root mean square error. (RMSE) punishes large errors 
+        and results in a score that is in the same units as the forecast data,
+        TODO test rmse = sqrt(mean_squared_error(test, predictions))
+        https://www.kaggle.com/learn-forum/52081
+        """
+        
+        return K.sqrt(K.mean(K.square(y_pred - y_true)))
+
 
     def CreateModel(self,return_metrics = False):
         """
@@ -100,7 +113,7 @@ class DeepModelTS(object):
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
         #TODO add val_loss
         # acc and val_acc are only for classification
-        model.compile(optimizer='adam', loss='mse') # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
+        model.compile(optimizer='adam', loss= self.rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
         # Saving the model to the class 
         self.model = model
@@ -151,12 +164,16 @@ class DeepModelTS(object):
         if(self.train_validation_split > 0):
         
             # Getting the last n time series 
+
             _, X_test, _, _ = self.create_data_for_NN() #TODO consider storing X_test from previous call (inside train method)        
+
 
             # Making the prediction list 
             yhat = [y[0] for y in self.model.predict(X_test)]
 
         return yhat
+
+
 
     def predict_n_ahead(self, n_ahead: int):
         """

@@ -43,16 +43,19 @@ df = df.groupby('Datetime', as_index=False)[city_name_MW].mean()
 df.sort_values('Datetime', inplace=True)
 
 # Plotting dataset as reference
+plt.figure()
 plt.plot('Datetime',city_name_MW,data = df)
 plt.title("Total consumption (MW) per day") 
-plt.show()
+plt.draw()
+plt.pause(0.001) #avoid blocking thread while displaying image
+
 
 # Performing data scaling
 df[city_name_MW] = DeepModelTS.data_scale(df[city_name_MW])
 
-plt.plot('Datetime', city_name_MW, data=df)
-plt.title("Normalized total consumption (MW) per day")
-plt.show()
+# plt.plot('Datetime', city_name_MW, data=df)
+# plt.title("Normalized total consumption (MW) per day")
+# plt.show()
 
 # Initiating the class 
 deep_learner = DeepModelTS(
@@ -68,10 +71,17 @@ deep_learner = DeepModelTS(
 # Fitting the model 
 deep_learner.CreateModel()
 history = deep_learner.train(return_metrics = True)
-plt.plot(history.history['loss'])
-plt.legend( ['mse'] )
-plt.title("Cost function")  
-plt.show()
+
+if(len(history.epoch)>1):
+    plt.figure()
+    plt.plot(history.history['loss'], label = 'rmse_train')
+    plt.plot(history.history['val_loss'], label = 'rmse_validation')
+    plt.legend()
+    plt.title("Cost function")  
+    plt.draw()
+    plt.pause(0.001)
+    
+
 
 # Making the prediction on the validation set
 # Only applicable if train_validation_split in the DNN_params.yml > 0
@@ -98,9 +108,8 @@ if len(yhat) > 0:
     plt.title("Validation set forecast")    
     plt.legend()
     plt.grid()
-    plt.show()   
-    
-    
+    plt.draw()
+    plt.pause(0.001)  
     
 # Forecasting n steps ahead   
 
