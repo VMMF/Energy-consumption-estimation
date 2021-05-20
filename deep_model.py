@@ -173,7 +173,8 @@ class DeepModelTS(object):
 
         return yhat
 
-
+    #TODO Implement forward chaining validation
+    # https://stats.stackexchange.com/questions/14099/using-k-fold-cross-validation-for-time-series-model-selection
 
     def predict_n_ahead(self, n_ahead: int):
         """
