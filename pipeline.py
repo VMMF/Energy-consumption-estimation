@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 # The deep learning class
-from deep_model import DeepModelTS
+from model_lstm import ModelLSTM
 
 # Reading the neural network parameters configuration file
 import yaml
@@ -19,7 +19,7 @@ import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force CPU use
 
 # Data preprocessing
-from sklearn.preprocessing import MinMaxScaler
+from data_tools import data_scale
 
 # Reading the Deep Neural Network hyper parameters
 with open(f'{os.getcwd()}\\DNN_params.yml') as file:
@@ -39,6 +39,9 @@ df[city_name_MW].fillna(0, inplace=True)
 # Averaging MW of possible duplicates in Datetime column, not using Datetime columns as new index, keeping 1,2,3...
 df = df.groupby('Datetime', as_index=False)[city_name_MW].mean()
 
+#TODO analyse and transform (if required) time series to stationary
+#https://machinelearningmastery.com/time-series-forecasting-long-short-term-memory-network-python/
+
 # Sorting the values by Datetime inside the same dataframe
 df.sort_values('Datetime', inplace=True)
 
@@ -47,20 +50,21 @@ plt.figure()
 plt.plot('Datetime',city_name_MW,data = df)
 plt.title("Total consumption (MW) per day") 
 plt.draw()
-plt.pause(0.001) #avoid blocking thread while displaying image
+plt.pause(0.01) #avoid blocking thread while displaying image
 #TODO plot in another thread
+
 
 
 # Performing data scaling
 # TODO To prevent data leakage, do scaling only on training set
-df[city_name_MW] = DeepModelTS.data_scale(df[city_name_MW])
+df[city_name_MW] = data_scale(df[city_name_MW])
 
 # plt.plot('Datetime', city_name_MW, data=df)
 # plt.title("Normalized total consumption (MW) per day")
 # plt.show()
 
 # Initiating the class 
-deep_learner = DeepModelTS(
+deep_learner = ModelLSTM(
     data=df, 
     Y_var= city_name_MW,
     estimate_based_on=conf.get('estimate_based_on'),
@@ -81,7 +85,7 @@ if(len(history.epoch)>1):
     plt.legend()
     plt.title("Cost function")  
     plt.draw()
-    plt.pause(0.001)
+    plt.pause(0.01)
     
 
 
@@ -92,8 +96,8 @@ yhat = deep_learner.validate()
 if len(yhat) > 0:
 
     #rescaling data
-    yhat = DeepModelTS.data_scale(yhat, FWD= False)
-    df[city_name_MW] = DeepModelTS.data_scale(df[city_name_MW], FWD= False)
+    yhat = data_scale(yhat, FWD= False)
+    df[city_name_MW] = data_scale(df[city_name_MW], FWD= False)
 
     # Constructing the forecast dataframe
     fc = df.tail(len(yhat)).copy() # copying the last yhat rows from the data
@@ -111,12 +115,16 @@ if len(yhat) > 0:
     plt.legend()
     plt.grid()
     plt.draw()
-    plt.pause(0.001)  
+    plt.pause(0.01)  
     
+
+
+
 # Forecasting n steps ahead   
 
 # Creating a new model without validation set (full data) and forecasting n steps ahead
-deep_learner = DeepModelTS(
+#TODO use previously trained model
+deep_learner = ModelLSTM(
     data=df, 
     Y_var= city_name_MW,
     estimate_based_on=conf.get('estimate_based_on'),
@@ -128,15 +136,24 @@ deep_learner = DeepModelTS(
 
 # Fitting the model 
 deep_learner.create_model()
-deep_learner.train()
+history = deep_learner.train(return_metrics = True)
 
-# Forecasting n steps ahead
+if(len(history.epoch)>1):
+    plt.figure()
+    plt.plot(history.history['loss'], label = 'rmse_train')
+    # plt.plot(history.history['val_loss'], label = 'rmse_validation')
+    plt.legend()
+    plt.title("Cost function")  
+    plt.draw()
+    plt.pause(0.01)
+
+# Forecasting 1 week ahead 7 * 24h = 168h
 n_ahead = 168 #TODO put this on a separate file
-yhat = deep_learner.predict_n_ahead(n_ahead)
+yhat = deep_learner.predict_ahead(n_ahead) # predicts future MW usage
 yhat = [y[0][0] for y in yhat] # TODO check yhat = np.squeeze(yhat)
 
 # Constructing the forecast dataframe
-fc = df.tail(400).copy() 
+fc = df.tail(504).copy() # 3 weeks of data
 fc['type'] = 'original'
 
 last_date = max(fc['Datetime'])
@@ -147,14 +164,14 @@ hat_frame = pd.DataFrame({
 })
 
 fc = fc.append(hat_frame)
-fc.reset_index(inplace=True, drop=True)
+fc.reset_index(inplace=True, drop=True) # don't save new index as column
 
 # Ploting future values forecasts 
 plt.figure(figsize=(12, 8))
 for col_type in ['original', 'forecast']:
     plt.plot('Datetime', city_name_MW, data=fc[fc['type']==col_type], label=col_type )
 
-plt.title("Future values forecast") 
+plt.title("Forecasting 1 week") 
 plt.legend()
 plt.grid()
 plt.show()    

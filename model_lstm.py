@@ -1,24 +1,20 @@
 # Data wrangling
-from numpy.core.numeric import False_
 import pandas as pd
 import numpy as np
 
 # Deep learning: 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
-from keras import backend as K
 
 
-# Data preprocessing
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.exceptions import NotFittedError
+from data_tools import *
 
-class DeepModelTS(object):
+
+class ModelLSTM(object):
     """
-    A class to create a deep time series model
+    A class to create a long short-term memory network
+    Should inherit from a abstract model class
     """
-    #"static" class variable
-    _scaler = None
 
     def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_validation_split=0 ):
         self.data = data 
@@ -28,35 +24,13 @@ class DeepModelTS(object):
         self.batch_size = batch_size
         self.epochs = epochs
         self.train_validation_split = train_validation_split
+    
 
-    @staticmethod
-    def create_X_Y(ts: list, lag: int) -> tuple:
-        """
-        A method to create X and Y matrix from a time series. 
-        Before machine learning can be used, time series forecasting problems must be re-framed as supervised learning problems. 
-        From a sequence to pairs of input and output sequences.
-        """
-        X, Y = [], []
-
-        if len(ts) - lag <= 0:
-            X.append(ts) # if not enough samples for the lag, use all the ones you have
-        else:
-            for i in range(len(ts) - lag):
-                Y.append(ts[i + lag]) #start filling after the 1st lag samples. Y is [len(ts) - lag] x 1
-                X.append(ts[i:(i + lag)]) # fill buffers of lag samples. X is [len(ts) - lag] x lag
-
-        # each Y sample will have an X buffer of size "previous lag samples" associated to it
-        X, Y = np.array(X), np.array(Y)
-
-        # Reshaping the X array to an LSTM input shape (numpy array necessary for model.predict())
-        X = np.reshape(X, (X.shape[0], X.shape[1], 1))
-
-        return X, Y         
-
-    def create_data_for_NN(self, use_last_n=None ):
+    def create_data_for_model(self, use_last_n=None ):
         """
         A method to create data for the neural network model
         It separates train from validation set (no model test set for now)
+        # TODO should be inherited from an abstract class
         """
         # Extracting the main variable we want to model/forecast
         y = self.data[self.Y_var].tolist()
@@ -66,7 +40,7 @@ class DeepModelTS(object):
             y = y[-use_last_n:] #assume your time series are the last use_last_n only
 
         # The X matrix will hold the lags of Y 
-        X, Y = self.create_X_Y(y, self.estimate_based_on)
+        X, Y = timeseries_to_XY(y, self.estimate_based_on)
 
         # Creating training and test sets 
         X_train = X
@@ -87,17 +61,6 @@ class DeepModelTS(object):
 
         return X_train, X_test, Y_train, Y_test
 
-    @staticmethod
-    def rmse(y_true, y_pred):
-        """
-        A method to calculate root mean square error. (RMSE) punishes large errors 
-        and results in a score that is in the same units as the forecast data,
-        TODO test rmse = sqrt(mean_squared_error(test, predictions))
-        https://www.kaggle.com/learn-forum/52081
-        """
-        
-        return K.sqrt(K.mean(K.square(y_pred - y_true)))
-
 
     def create_model(self,return_metrics = False):
         """
@@ -113,7 +76,7 @@ class DeepModelTS(object):
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
         #TODO add val_loss
         # acc and val_acc are only for classification
-        model.compile(optimizer='adam', loss= self.rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
+        model.compile(optimizer='adam', loss= rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
         # Saving the model to the class 
         self.model = model
@@ -129,7 +92,7 @@ class DeepModelTS(object):
         """
 
         # Getting the data 
-        X_train, X_test, Y_train, Y_test = self.create_data_for_NN()
+        X_train, X_test, Y_train, Y_test = self.create_data_for_model()
 
         # Defining the model parameter dict 
         keras_dict = {
@@ -165,7 +128,7 @@ class DeepModelTS(object):
         
             # Getting the last n time series 
 
-            _, X_test, _, _ = self.create_data_for_NN() #TODO consider storing X_test from previous call (inside train method)        
+            _, X_test, _, _ = self.create_data_for_model() #TODO consider storing X_test from previous call (inside train method)        
 
 
             # Making the prediction list 
@@ -176,23 +139,22 @@ class DeepModelTS(object):
     #TODO Implement forward chaining validation
     # https://stats.stackexchange.com/questions/14099/using-k-fold-cross-validation-for-time-series-model-selection
 
-    def predict_n_ahead(self, n_ahead: int):
+    def predict_ahead(self, steps: int):
         """
         A method to predict n time steps ahead
         """    
-        X, _, _, _ = self.create_data_for_NN(use_last_n=self.estimate_based_on)        
+        X, _, _, _ = self.create_data_for_model( use_last_n=self.estimate_based_on )   # X is (1,estimate_based_on)     
 
         # Making the prediction list 
         yhat = []
-        # yhat.append(X) # to avoid the gap between the end of the model and the start of the predictions in the plot
 
-        for _ in range(n_ahead):
+        for _ in range(steps):
             # Predict 1 sample
-            fc = self.model.predict(X) # X is (1,estimate_based_on)
-            yhat.append(fc)
+            fcst = self.model.predict(X) 
+            yhat.append(fcst)
 
             # Putting it at the end of the buffer
-            X = np.append(X, fc)
+            X = np.append(X, fcst)
 
             # Eliminating the 1st sample in the buffer to keep it with dimensions (1,estimate_based_on)
             X = np.delete(X, 0)
@@ -203,32 +165,7 @@ class DeepModelTS(object):
         return yhat    
 
 
-    @staticmethod
-    def data_scale(city_name_MW,FWD = True):
-        """
-        A method to scale and de_scale data
-        city_name_MW is a pandas series
-        TODO: make sure de_scale is not called before scale
-        """   
-        
-        if FWD:
-            # scalling
-            DeepModelTS._scaler = MinMaxScaler(feature_range=(0, 1))
-            raw_MW = np.array ( city_name_MW.astype('float32') )
-            raw_MW = raw_MW.reshape(raw_MW.shape[0], 1) #reshape operation is not in place
-            scaled = DeepModelTS._scaler.fit_transform(raw_MW)
-            return scaled
-        else:
-            # scalling back
-            recons_MW = np.array ( city_name_MW )
-            recons_MW = recons_MW.reshape(recons_MW.shape[0], 1) #reshape operation is not in place
-            try:
-                de_scaled = DeepModelTS._scaler.inverse_transform(recons_MW)
-                return de_scaled
-            except NotFittedError as e:
-                print("\n")
-                print("Make sure to call this method with FWD = True, before calling it with FWD = False")
-                print(repr(e))
-                print("\n")
+
+
             
 

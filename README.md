@@ -53,16 +53,16 @@ Note: https://www.tensorflow.org/install/gpu
 conda create python=3.8 --name deep-ts
 ```
 
-Activate the virtual environment:
+Activate a virtual environment that we will call series-forecast:
 ```
-conda activate deep-ts
+conda activate series-forecast
 or
-CALL conda.bat activate deep-ts
+CALL conda.bat activate series-forecast
 ```
 
 In VS Code select the Python interpreter inside the conda virtual environment as opposed to the local Python version (possibly not installed through conda)
 Command: Ctrl+Shift+P
-        Python: Select interpreter
+         Python: Select interpreter
 Note: https://code.visualstudio.com/docs/python/environments
 Verify that the VS Code settigs.json contains the following ""python.pythonPath": "C:\\Users\\WhateverYourUseris\\miniconda3\\envs\\deep-ts\\python.exe""
 
@@ -78,4 +78,4 @@ After this process is finished run pipeline.py
 
 # Time series data
 
-The data is taken from: https://www.kaggle.com/robikscube/hourly-energy-consumption. The data is an hourly time series regarding the power consumption (in MW) in the Dayton region. The data spans from 2004-10-01 to 2018-08-03 (**n=121271**)
+The data is taken from: https://www.kaggle.com/robikscube/hourly-energy-consumption. The data is an hourly time series regarding the power consumption (in MW) in different selectable regions.
