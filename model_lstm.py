@@ -16,53 +16,83 @@ class ModelLSTM(object):
     Should inherit from a abstract model class
     """
 
-    def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,train_validation_split=0 ):
-        self.data = data 
-        self.Y_var = Y_var 
+    def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,validation_split = 0,test_split = 0, scale = True ): 
+        
         self.estimate_based_on = estimate_based_on 
         self.LSTM_layer_depth = LSTM_layer_depth
         self.batch_size = batch_size
         self.epochs = epochs
-        self.train_validation_split = train_validation_split
+        self.validation_split = validation_split
+        self.test_split = test_split
+
+        self.time_series = data[Y_var].tolist() # Extracting the main variable we want to model/forecast
+        X_train, Y_train, X_validate, Y_validate, X_test, Y_test = self.create_data_for_model(self.time_series, scale)
+        
+        self.X_train = X_train
+        self.X_validate = X_validate
+        self.X_test = X_test
+        self.Y_train = Y_train
+        self.Y_validate = Y_validate
+        self.Y_test = Y_test
     
 
-    def create_data_for_model(self, use_last_n=None ):
+    #TODO make this a class function
+    def create_data_for_model(self, time_series, scale = True, use_last_n=None ):
         """
         A method to create data for the neural network model
-        It separates train from validation set (no model test set for now)
+        It separates train, validation set and test sets
         # TODO should be inherited from an abstract class
         """
-        # Extracting the main variable we want to model/forecast
-        y = self.data[self.Y_var].tolist()
 
         # Subseting the time series if needed
         if use_last_n is not None:
-            y = y[-use_last_n:] #assume your time series are the last use_last_n only
+            time_series = time_series[-use_last_n:] #assume your time series are the last use_last_n only
 
         # The X matrix will hold the lags of Y 
-        X, Y = timeseries_to_XY(y, self.estimate_based_on)
+        X, Y = timeseries_to_XY(time_series, self.estimate_based_on)
 
         # Creating training and test sets 
         X_train = X
+        X_validate = []
         X_test = []
 
         Y_train = Y
+        Y_validate = []
         Y_test = []
 
+        len_X = len(X)
+
         #TODO consider model.validation_split or https://datascience.stackexchange.com/questions/38955/how-does-the-validation-split-parameter-of-keras-fit-function-work
-        if self.train_validation_split > 0:
 
-            index = round(len(X) * self.train_validation_split)
-            X_train = X[0:(len(X) - index)]
-            X_test = X[len(X_train):]     
+
             
-            Y_train = Y[:(len(X) - index)]
-            Y_test = Y[len(Y_train):]
+        # extracting test segment
+        index_test = round(len_X * self.test_split)
 
-        return X_train, X_test, Y_train, Y_test
+        X_train_validation = X[ :(len_X - index_test)]
+        X_test = X[len(X_train_validation): ]    
+
+        Y_train_validation = Y[ :(len(X) - index_test)]
+        Y_test = Y[len(Y_train_validation): ] 
+
+        # extracting validation segment
+        index_validation = round( len(X_train_validation) * self.validation_split)
+
+        X_train = X_train_validation[ :(len(X_train_validation) - index_validation)]
+        X_validate = X_train_validation[len(X_train): ] 
+        
+        Y_train = Y_train_validation[ :(len(X_train_validation) - index_validation)]
+        Y_validate = Y_train_validation[len(Y_train): ] 
 
 
-    def create_model(self,return_metrics = False):
+        # if (scale):
+        #     # Performing data scaling only on training samples to prevent data leaking
+        #     scaler_learn (Y_train)
+        #     Y_train = scaler_work(Y_train)
+
+        return X_train, Y_train, X_validate, Y_validate, X_test, Y_test
+
+    def create_model(self):
         """
         Creating an LSTM model 
         TODO : Allow passing different model metrics
@@ -74,7 +104,6 @@ class ModelLSTM(object):
         
         model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.estimate_based_on, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
-        #TODO add val_loss
         # acc and val_acc are only for classification
         model.compile(optimizer='adam', loss= rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
@@ -83,7 +112,7 @@ class ModelLSTM(object):
 
         return model
 
-    def train(self,return_metrics = False):
+    def train(self, return_metrics = False):
         """
         Train should inherit from an abstract class. Each model would know the right way to train
         Creating an LSTM model 
@@ -91,21 +120,18 @@ class ModelLSTM(object):
 
         """
 
-        # Getting the data 
-        X_train, X_test, Y_train, Y_test = self.create_data_for_model()
-
         # Defining the model parameter dict 
         keras_dict = {
-            'x': X_train,
-            'y': Y_train,
+            'x': self.X_train,
+            'y': self.Y_train,
             'batch_size': self.batch_size,
             'epochs': self.epochs,
             'verbose': 2, # Decreasing verbosity level (0,2,1) accelerates training speed
             'shuffle': False #Don't shuffle the training data before each epoch (bad for )
         }
 
-        if self.train_validation_split > 0:
-            keras_dict.update({ 'validation_data': (X_test, Y_test) })
+        if self.validation_split > 0:
+            keras_dict.update({ 'validation_data': (self.X_validate, self.Y_validate) })
 
         # Training the model 
         print("\n")
@@ -116,25 +142,32 @@ class ModelLSTM(object):
             return history
 
 
-
-
     def validate(self) -> list:
         """
         A method to predict the validation set used in creating the model
         """
         yhat = []
 
-        if(self.train_validation_split > 0):
-        
-            # Getting the last n time series 
-
-            _, X_test, _, _ = self.create_data_for_model() #TODO consider storing X_test from previous call (inside train method)        
-
-
+        if(self.validation_split > 0):
             # Making the prediction list 
-            yhat = [y[0] for y in self.model.predict(X_test)]
+            # TODO review self.model(X_validate,training=False)
+            yhat = [y[0] for y in self.model.predict(self.X_validate)] 
 
         return yhat
+
+    def test(self) -> list:
+        """
+        A method to predict the validation set used in creating the model
+        """
+        yhat = []
+
+        if(self.test_split > 0):
+            # Making the prediction list 
+            # TODO review self.model(X_validate,training=False)
+            yhat = [y[0] for y in self.model.predict(self.X_test)] 
+
+        return yhat
+    
 
     #TODO Implement forward chaining validation
     # https://stats.stackexchange.com/questions/14099/using-k-fold-cross-validation-for-time-series-model-selection
@@ -143,24 +176,25 @@ class ModelLSTM(object):
         """
         A method to predict n time steps ahead
         """    
-        X, _, _, _ = self.create_data_for_model( use_last_n=self.estimate_based_on )   # X is (1,estimate_based_on)     
+                    
+        X_train, _, _, _, _, _ = self.create_data_for_model(self.time_series, use_last_n=self.estimate_based_on )   # X is (1,estimate_based_on)     
 
         # Making the prediction list 
         yhat = []
 
         for _ in range(steps):
             # Predict 1 sample
-            fcst = self.model.predict(X) 
+            fcst = self.model.predict(X_train) 
             yhat.append(fcst)
 
             # Putting it at the end of the buffer
-            X = np.append(X, fcst)
+            X_train = np.append(X_train, fcst)
 
             # Eliminating the 1st sample in the buffer to keep it with dimensions (1,estimate_based_on)
-            X = np.delete(X, 0)
+            X_train = np.delete(X_train, 0)
 
             # Reshaping for compatibility with model.predict on the next iteration
-            X = np.reshape(X, (1, len(X), 1))
+            X_train = np.reshape(X_train, (1, len(X_train), 1))
 
         return yhat    
 

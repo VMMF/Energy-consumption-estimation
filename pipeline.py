@@ -25,7 +25,7 @@ from data_tools import data_scale
 with open(f'{os.getcwd()}\\DNN_params.yml') as file:
     conf = yaml.load(file, Loader=yaml.FullLoader)
 
-city_name_MW = 'DAYTON_MW'
+city_name_MW = 'DEOK_MW'
 
 # Reading the data from csv. The dataframe will contain one column per column in the csv
 df = pd.read_csv('input/' + str(city_name_MW)+'.csv')
@@ -48,30 +48,28 @@ df.sort_values('Datetime', inplace=True)
 # Plotting dataset as reference
 plt.figure()
 plt.plot('Datetime',city_name_MW,data = df)
-plt.title("Total consumption (MW) per day") 
+plt.title("Total consumption " + str(city_name_MW) + " per hour") 
+plt.ylabel("MW")
+plt.xlabel("hours")
 plt.draw()
 plt.pause(0.01) #avoid blocking thread while displaying image
 #TODO plot in another thread
 
 
 
-# Performing data scaling
-# TODO To prevent data leakage, do scaling only on training set
-df[city_name_MW] = data_scale(df[city_name_MW])
+# df[city_name_MW] = data_scale(df[city_name_MW], FWD= False)
 
-# plt.plot('Datetime', city_name_MW, data=df)
-# plt.title("Normalized total consumption (MW) per day")
-# plt.show()
 
 # Initiating the class 
 deep_learner = ModelLSTM(
     data=df, 
     Y_var= city_name_MW,
-    estimate_based_on=conf.get('estimate_based_on'),
-    LSTM_layer_depth=conf.get('LSTM_layer_depth'),
+    estimate_based_on = conf.get('estimate_based_on'),
+    LSTM_layer_depth = conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
-    epochs=conf.get('epochs'),
-    train_validation_split=conf.get('train_validation_split') # The share of data that will be used for validation
+    epochs = conf.get('epochs'),
+    validation_split = conf.get('validation_split'), # The share of data that will be used for validation
+    test_split = conf.get('test_split')
 )
 
 # Fitting the model 
@@ -81,7 +79,8 @@ history = deep_learner.train(return_metrics = True)
 if(len(history.epoch)>1):
     plt.figure()
     plt.plot(history.history['loss'], label = 'rmse_train')
-    plt.plot(history.history['val_loss'], label = 'rmse_validation')
+    if 'val_loss' in history.history:
+        plt.plot(history.history['val_loss'], label = 'rmse_validation')
     plt.legend()
     plt.title("Cost function")  
     plt.draw()
@@ -90,27 +89,38 @@ if(len(history.epoch)>1):
 
 
 # Making the prediction on the validation set
-# Only applicable if train_validation_split in the DNN_params.yml > 0
+# Only applicable if validation_split in the DNN_params.yml > 0
 yhat = deep_learner.validate()
 
 if len(yhat) > 0:
 
     #rescaling data
-    yhat = data_scale(yhat, FWD= False)
-    df[city_name_MW] = data_scale(df[city_name_MW], FWD= False)
+    # yhat = data_scale(yhat, FWD= False)
+    # df[city_name_MW] = data_scale(df[city_name_MW], FWD= False)
 
     # Constructing the forecast dataframe
-    fc = df.tail(len(yhat)).copy() # copying the last yhat rows from the data
-    fc.reset_index(inplace=True) # When we reset the index, the old index is added as a column, and a new sequential index is used
-    fc['forecast'] = yhat #creating a new forecast column
-
-    # Ploting the forecasts
-
+    validation = deep_learner.Y_validate
     plt.figure(figsize=(12, 8))
-    for dtype in [city_name_MW, 'forecast']:
-        # the dataframe in fc has the column named Datetime used as x axis in plot
-        # it also has the columns city_name and forecast used as y axis
-        plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
+    plt.plot(validation)
+    plt.plot(yhat)
+
+    # TODO Add the time index to the plot knowing the validation data range in the original timeseries
+
+
+    # fc = df.tail(len(yhat)).copy() # copying the last yhat rows from the data
+    # fc.reset_index(inplace=True) # When we reset the index, the old index is added as a column, and a new sequential index is used
+    # fc['forecast'] = yhat #creating a new forecast column
+
+    # # Ploting the forecasts
+
+    # plt.figure(figsize=(12, 8))
+    # for dtype in [city_name_MW, 'forecast']:
+    #     # the dataframe in fc has the column named Datetime used as x axis in plot
+    #     # it also has the columns city_name and forecast used as y axis
+    #     plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
+
+
+
     plt.title("Validation set forecast")    
     plt.legend()
     plt.grid()
@@ -119,59 +129,94 @@ if len(yhat) > 0:
     
 
 
+# Making the prediction on the test set
+# Only applicable if test_split in the DNN_params.yml > 0
+yhat = deep_learner.test()
 
-# Forecasting n steps ahead   
+if len(yhat) > 0:
 
-# Creating a new model without validation set (full data) and forecasting n steps ahead
-#TODO use previously trained model
-deep_learner = ModelLSTM(
-    data=df, 
-    Y_var= city_name_MW,
-    estimate_based_on=conf.get('estimate_based_on'),
-    LSTM_layer_depth=conf.get('LSTM_layer_depth'),
-    batch_size = conf.get('batch_size'),
-    epochs=conf.get('epochs'),
-    train_validation_split=0 
-)
+    #rescaling data
+    # yhat = data_scale(yhat, FWD= False)
+    # df[city_name_MW] = data_scale(df[city_name_MW], FWD= False)
 
-# Fitting the model 
-deep_learner.create_model()
-history = deep_learner.train(return_metrics = True)
+    fc = df.tail(len(yhat)).copy() # copying the last yhat rows from the data
+    fc.reset_index(inplace=True) # When we reset the index, the old index is added as a column, and a new sequential index is used
+    fc['test forecast'] = yhat #creating a new forecast column
 
-if(len(history.epoch)>1):
-    plt.figure()
-    plt.plot(history.history['loss'], label = 'rmse_train')
-    # plt.plot(history.history['val_loss'], label = 'rmse_validation')
+    # Ploting the forecasts
+
+    plt.figure(figsize=(12, 8))
+    for dtype in [city_name_MW, 'test forecast']:
+        # the dataframe in fc has the column named Datetime used as x axis in plot
+        # it also has the columns city_name and forecast used as y axis
+        plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
+
+    plt.title("Test set forecast")    
     plt.legend()
-    plt.title("Cost function")  
-    plt.draw()
-    plt.pause(0.01)
+    plt.grid()
+    plt.show()  
+    # plt.pause(0.01) 
 
-# Forecasting 1 week ahead 7 * 24h = 168h
-n_ahead = 168 #TODO put this on a separate file
-yhat = deep_learner.predict_ahead(n_ahead) # predicts future MW usage
-yhat = [y[0][0] for y in yhat] # TODO check yhat = np.squeeze(yhat)
 
-# Constructing the forecast dataframe
-fc = df.tail(504).copy() # 3 weeks of data
-fc['type'] = 'original'
 
-last_date = max(fc['Datetime'])
-hat_frame = pd.DataFrame({
-    'Datetime': [last_date + timedelta(hours=x + 1) for x in range(n_ahead)], 
-    city_name_MW: yhat,
-    'type': 'forecast'
-})
 
-fc = fc.append(hat_frame)
-fc.reset_index(inplace=True, drop=True) # don't save new index as column
 
-# Ploting future values forecasts 
-plt.figure(figsize=(12, 8))
-for col_type in ['original', 'forecast']:
-    plt.plot('Datetime', city_name_MW, data=fc[fc['type']==col_type], label=col_type )
 
-plt.title("Forecasting 1 week") 
-plt.legend()
-plt.grid()
-plt.show()    
+
+
+# # Forecasting n steps ahead   
+
+# # Creating a new model without validation set (full data) and forecasting n steps ahead
+# #TODO use previously trained model
+# deep_learner = ModelLSTM(
+#     data=df, 
+#     Y_var= city_name_MW,
+#     estimate_based_on=conf.get('estimate_based_on'),
+#     LSTM_layer_depth=conf.get('LSTM_layer_depth'),
+#     batch_size = conf.get('batch_size'),
+#     epochs=conf.get('epochs'),
+#     validation_split=0 
+# )
+
+# # Fitting the model 
+# deep_learner.create_model()
+# history = deep_learner.train(return_metrics = True)
+
+# if(len(history.epoch)>1):
+#     plt.figure()
+#     plt.plot(history.history['loss'], label = 'rmse_train')
+#     if 'val_loss' in history.history:
+#         plt.plot(history.history['val_loss'], label = 'rmse_validation')
+#     plt.legend()
+#     plt.title("Cost function")  
+#     plt.draw()
+#     plt.pause(0.01)
+
+# # Forecasting 1 week ahead 7 * 24h = 168h
+# n_ahead = 168 #TODO put this on a separate file
+# yhat = deep_learner.predict_ahead(n_ahead) # predicts future MW usage
+# yhat = [y[0][0] for y in yhat] # TODO check yhat = np.squeeze(yhat)
+
+# # Constructing the forecast dataframe
+# fc = df.tail(504).copy() # 3 weeks of data
+# fc['type'] = 'original'
+
+# last_date = max(fc['Datetime'])
+# hat_frame = pd.DataFrame({
+#     'Datetime': [last_date + timedelta(hours=x + 1) for x in range(n_ahead)], 
+#     city_name_MW: yhat,
+#     'type': 'forecast'
+# })
+
+# fc = fc.append(hat_frame)
+# fc.reset_index(inplace=True, drop=True) # don't save new index as column
+
+# # Ploting future values forecasts 
+# plt.figure(figsize=(12, 8))
+# for col_type in ['original', 'forecast']:
+#     plt.plot('Datetime', city_name_MW, data=fc[fc['type']==col_type], label=col_type )
+
+# plt.title("Forecasting 1 week") 
+# plt.legend()
+# plt.grid()
+# plt.show()    

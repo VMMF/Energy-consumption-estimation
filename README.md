@@ -5,7 +5,7 @@ The aim of this project is to forecast the energy consumption based on pre-exist
 It will use a short-term memory (LSTM) deep learning network
 https://towardsdatascience.com/illustrated-guide-to-lstms-and-gru-s-a-step-by-step-explanation-44e9eb85bf21
 
-Key concepts of LSTM:
+# Key concepts of LSTM:
 They are a special case of Recurrent Neural Networks (RNN) usel to model sequence data, for instance on speech recognition, speech synthesis, text generation, video caption generation, etc 
 These networks were invented to fight the problem of vanishing gradient (which afect early layers) on RNN 
 They decide what info to keep in the memory, as opposed to keeping it all like RNN but giving less weight to early samples of the sequence
@@ -79,3 +79,21 @@ After this process is finished run pipeline.py
 # Time series data
 
 The data is taken from: https://www.kaggle.com/robikscube/hourly-energy-consumption. The data is an hourly time series regarding the power consumption (in MW) in different selectable regions.
+
+# References
+
+https://towardsdatascience.com/energy-consumption-time-series-forecasting-with-python-and-lstm-deep-learning-model-7952e2f9a796
+https://github.com/Eligijus112/deep-learning-ts
+https://www.kaggle.com/robikscube/hourly-energy-consumption?select=NI_hourly.csv
+
+https://github.com/Housiadas/forecasting-energy-consumption-LSTM
+https://www.kaggle.com/uciml/electric-power-consumption-data-set
+
+https://cs109-energy.github.io/building-energy-consumption-prediction.html
+https://github.com/awslabs/sagemaker-deep-demand-forecast
+
+https://machinelearningmastery.com/multivariate-time-series-forecasting-lstms-keras/
+https://machinelearningmastery.com/convert-time-series-supervised-learning-problem-python/
+https://machinelearningmastery.com/time-series-forecasting-long-short-term-memory-network-python/
+
+https://stackoverflow.com/questions/58378374/why-does-keras-model-predict-slower-after-compile/58385156#58385156

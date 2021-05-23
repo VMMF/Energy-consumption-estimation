@@ -33,11 +33,19 @@ def timeseries_to_XY(samples: list, buffer: int) -> tuple:
 
 
 
-#TODO fix global variable
+#TODO fix global variable, create a Scaler class
 global scaler
-scaler = MinMaxScaler(feature_range=(0, 1))
+scaler = MinMaxScaler(feature_range=(0, 1)) # TODO if model activation is tanh use [-1,1], for Relu use [0,1]  
 
-def data_scale(city_name_MW,FWD = True):
+
+def scaler_learn(city_name_MW):
+
+    raw_MW = np.array ( city_name_MW.astype('float32') )
+    raw_MW = raw_MW.reshape(raw_MW.shape[0], 1) #reshape operation is not in place
+    scaler.fit(raw_MW)
+
+
+def scaler_work(city_name_MW,FWD = True):
     """
     A method to scale and de_scale data
     city_name_MW is a pandas series
@@ -48,7 +56,7 @@ def data_scale(city_name_MW,FWD = True):
         # scalling
         raw_MW = np.array ( city_name_MW.astype('float32') )
         raw_MW = raw_MW.reshape(raw_MW.shape[0], 1) #reshape operation is not in place
-        scaled = scaler.fit_transform(raw_MW)
+        scaled = scaler.transform(raw_MW)
         return scaled
     else:
         # scalling back
@@ -73,3 +81,6 @@ def rmse(y_true, y_pred):
     """
     
     return K.sqrt(K.mean(K.square(y_pred - y_true)))
+
+
+#TODO check if timeseries is stationary, otherwise    

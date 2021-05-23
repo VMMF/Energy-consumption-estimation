@@ -1,5 +1,6 @@
-train_validation_split: 0.1
+validation_split: 0.1
+test_split: 0.1
 estimate_based_on: 24
 LSTM_layer_depth: 64
 batch_size: 256
-epochs: 2
+epochs: 15
