@@ -6,6 +6,8 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
 
+#scaler tools
+from abstract_scaler import AbstractScaler
 
 from data_tools import *
 
@@ -16,7 +18,7 @@ class ModelLSTM(object):
     Should inherit from a abstract model class
     """
 
-    def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,validation_split = 0,test_split = 0, scale = True ): 
+    def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,validation_split = 0,test_split = 0, scaler: AbstractScaler = None ): 
         
         self.estimate_based_on = estimate_based_on 
         self.LSTM_layer_depth = LSTM_layer_depth
@@ -25,8 +27,10 @@ class ModelLSTM(object):
         self.validation_split = validation_split
         self.test_split = test_split
 
+        self.scaler = scaler
+
         self.time_series = data[Y_var].tolist() # Extracting the main variable we want to model/forecast
-        X_train, Y_train, X_validate, Y_validate, X_test, Y_test = self.create_data_for_model(self.time_series, scale)
+        X_train, Y_train, X_validate, Y_validate, X_test, Y_test = self.create_data_for_model(self.time_series)
         
         self.X_train = X_train
         self.X_validate = X_validate
@@ -36,8 +40,8 @@ class ModelLSTM(object):
         self.Y_test = Y_test
     
 
-    #TODO make this a class function
-    def create_data_for_model(self, time_series, scale = True, use_last_n=None ):
+
+    def create_data_for_model(self, time_series , use_last_n=None ):
         """
         A method to create data for the neural network model
         It separates train, validation set and test sets
@@ -47,6 +51,14 @@ class ModelLSTM(object):
         # Subseting the time series if needed
         if use_last_n is not None:
             time_series = time_series[-use_last_n:] #assume your time series are the last use_last_n only
+
+        if self.scaler is not None:
+
+            # Performing data scaling based only on training samples portion to prevent data leaking
+            training_time_series = time_series [ : round( len(time_series) * (1 - (self.test_split + self.validation_split) ) ) ]
+            self.scaler.learn(training_time_series)
+            #scaling the whole dataset
+            time_series = self.scaler.work(time_series, FWD = True)
 
         # The X matrix will hold the lags of Y 
         X, Y = timeseries_to_XY(time_series, self.estimate_based_on)
@@ -85,10 +97,7 @@ class ModelLSTM(object):
         Y_validate = Y_train_validation[len(Y_train): ] 
 
 
-        # if (scale):
-        #     # Performing data scaling only on training samples to prevent data leaking
-        #     scaler_learn (Y_train)
-        #     Y_train = scaler_work(Y_train)
+
 
         return X_train, Y_train, X_validate, Y_validate, X_test, Y_test
 
@@ -101,7 +110,7 @@ class ModelLSTM(object):
         """
         # Defining the model
         model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
-        
+        #TODO do not hardcode activation='relu'
         model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.estimate_based_on, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
         # acc and val_acc are only for classification
@@ -142,31 +151,59 @@ class ModelLSTM(object):
             return history
 
 
-    def validate(self) -> list:
+    def validate(self,return_metrics = False) -> list:
+        """
+        A method to predict the validation set used in creating the model
+        """
+        yhat = []
+        x = []
+        y = []
+        check_split = None
+
+        x = self.X_validate
+        y = self.Y_validate
+        check_split = self.validation_split
+
+        return self.__validate_or_test(x, y, check_split , return_metrics)
+
+
+
+    def test(self,return_metrics = False) -> list:
         """
         A method to predict the validation set used in creating the model
         """
         yhat = []
 
-        if(self.validation_split > 0):
+        x = self.X_test
+        y = self.Y_test
+        check_split = self.test_split
+
+        return self.__validate_or_test(x, y, check_split , return_metrics)
+
+
+    def __validate_or_test (self, x, y, check_split , return_metrics = False ):
+        """
+        A method to predict x as yhat, compare it to y and return yhat (in original scale if previously normalized).
+        Optionally return the prediction error of normalized data
+        """
+                
+
+        if(check_split > 0):
             # Making the prediction list 
             # TODO review self.model(X_validate,training=False)
-            yhat = [y[0] for y in self.model.predict(self.X_validate)] 
+            yhat = [y[0] for y in self.model.predict(x)] 
 
-        return yhat
 
-    def test(self) -> list:
-        """
-        A method to predict the validation set used in creating the model
-        """
-        yhat = []
+        if return_metrics:
+            error = rmse(y,yhat)
+            if self.scaler is not None and self.scaler.is_fit:
+                yhat = self.scaler.work(yhat, FWD = False)
+            return yhat, np.round(error.numpy(), decimals=2) 
+        else:
+            if self.scaler is not None and self.scaler.is_fit:
+                yhat = self.scaler.work(yhat, FWD = False)
+            return yhat
 
-        if(self.test_split > 0):
-            # Making the prediction list 
-            # TODO review self.model(X_validate,training=False)
-            yhat = [y[0] for y in self.model.predict(self.X_test)] 
-
-        return yhat
     
 
     #TODO Implement forward chaining validation
