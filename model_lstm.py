@@ -30,15 +30,40 @@ class ModelLSTM(object):
         self.scaler = scaler
 
         self.time_series = data[Y_var].tolist() # Extracting the main variable we want to model/forecast
-        X_train, Y_train, X_validate, Y_validate, X_test, Y_test = self.create_data_for_model(self.time_series)
+        X_train, Y_train, X_validate, Y_validate, index_validate, X_test, Y_test,index_test = self.create_data_for_model(self.time_series)
         
-        self.X_train = X_train
-        self.X_validate = X_validate
-        self.X_test = X_test
-        self.Y_train = Y_train
-        self.Y_validate = Y_validate
-        self.Y_test = Y_test
+        self._X_train = X_train
+        self._X_validate = X_validate
+        self._X_test = X_test
+
+        self._Y_train = Y_train
+        self._Y_validate = Y_validate
+        self._Y_test = Y_test
+
+        self._index_validate = index_validate
+        self._index_test = index_test
+
+    @property
+    def Y_validate(self):
+        if self.scaler is not None and self.scaler.is_fit:
+            return self.scaler.work(self._Y_validate, FWD = False) , self._index_validate
+        else:
+            return self._Y_validate , self._index_validate
     
+    @property
+    def Y_train(self):
+        if self.scaler is not None and self.scaler.is_fit:
+            return self.scaler.work(self._Y_train, FWD = False), self._index_test
+        else:
+            return self._Y_train, self._index_test
+
+    @property
+    def Y_test(self):
+        if self.scaler is not None and self.scaler.is_fit:
+            return self.scaler.work(self._Y_test, FWD = False)
+        else:
+            return self._Y_test
+
 
 
     def create_data_for_model(self, time_series , use_last_n=None ):
@@ -79,27 +104,27 @@ class ModelLSTM(object):
 
             
         # extracting test segment
-        index_test = round(len_X * self.test_split)
+        index_test = len_X - round(len_X * self.test_split)
 
-        X_train_validation = X[ :(len_X - index_test)]
-        X_test = X[len(X_train_validation): ]    
+        X_train_validation = X[ : index_test]
+        X_test = X[index_test : ]    
 
-        Y_train_validation = Y[ :(len(X) - index_test)]
-        Y_test = Y[len(Y_train_validation): ] 
+        Y_train_validation = Y[ : index_test]
+        Y_test = Y[index_test : ] 
 
         # extracting validation segment
-        index_validation = round( len(X_train_validation) * self.validation_split)
+        index_validate = len(X_train_validation) - round( len(X_train_validation) * self.validation_split)
 
-        X_train = X_train_validation[ :(len(X_train_validation) - index_validation)]
-        X_validate = X_train_validation[len(X_train): ] 
+        X_train = X_train_validation[ : index_validate]
+        X_validate = X_train_validation[ index_validate : ] 
         
-        Y_train = Y_train_validation[ :(len(X_train_validation) - index_validation)]
-        Y_validate = Y_train_validation[len(Y_train): ] 
+        Y_train = Y_train_validation[ : index_validate]
+        Y_validate = Y_train_validation[ index_validate : ] 
 
 
 
 
-        return X_train, Y_train, X_validate, Y_validate, X_test, Y_test
+        return X_train, Y_train, X_validate, Y_validate, index_validate, X_test, Y_test,index_test
 
     def create_model(self):
         """
@@ -113,8 +138,11 @@ class ModelLSTM(object):
         #TODO do not hardcode activation='relu'
         model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.estimate_based_on, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
+        
+        loss_function = rmse # TODO test mape and also update on __validate_or_test
         # acc and val_acc are only for classification
-        model.compile(optimizer='adam', loss= rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
+        model.compile(optimizer='adam', loss = loss_function )
+        # model.compile(optimizer='adam', loss= rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
         # Saving the model to the class 
         self.model = model
@@ -131,8 +159,8 @@ class ModelLSTM(object):
 
         # Defining the model parameter dict 
         keras_dict = {
-            'x': self.X_train,
-            'y': self.Y_train,
+            'x': self._X_train,
+            'y': self._Y_train,
             'batch_size': self.batch_size,
             'epochs': self.epochs,
             'verbose': 2, # Decreasing verbosity level (0,2,1) accelerates training speed
@@ -140,7 +168,7 @@ class ModelLSTM(object):
         }
 
         if self.validation_split > 0:
-            keras_dict.update({ 'validation_data': (self.X_validate, self.Y_validate) })
+            keras_dict.update({ 'validation_data': (self._X_validate, self._Y_validate) })
 
         # Training the model 
         print("\n")
@@ -160,8 +188,8 @@ class ModelLSTM(object):
         y = []
         check_split = None
 
-        x = self.X_validate
-        y = self.Y_validate
+        x = self._X_validate
+        y = self._Y_validate
         check_split = self.validation_split
 
         return self.__validate_or_test(x, y, check_split , return_metrics)
@@ -174,8 +202,8 @@ class ModelLSTM(object):
         """
         yhat = []
 
-        x = self.X_test
-        y = self.Y_test
+        x = self._X_test
+        y = self._Y_test
         check_split = self.test_split
 
         return self.__validate_or_test(x, y, check_split , return_metrics)
@@ -198,7 +226,7 @@ class ModelLSTM(object):
             error = rmse(y,yhat)
             if self.scaler is not None and self.scaler.is_fit:
                 yhat = self.scaler.work(yhat, FWD = False)
-            return yhat, np.round(error.numpy(), decimals=2) 
+            return yhat, error.numpy()
         else:
             if self.scaler is not None and self.scaler.is_fit:
                 yhat = self.scaler.work(yhat, FWD = False)
@@ -214,7 +242,7 @@ class ModelLSTM(object):
         A method to predict n time steps ahead
         """    
                     
-        X_train, _, _, _, _, _ = self.create_data_for_model(self.time_series, use_last_n=self.estimate_based_on )   # X is (1,estimate_based_on)     
+        X_train, _, _, _, _, _, _, _ = self.create_data_for_model(self.time_series, use_last_n=self.estimate_based_on )   # X is (1,estimate_based_on)     
 
         # Making the prediction list 
         yhat = []

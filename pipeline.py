@@ -25,7 +25,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force CPU use
 with open(f'{os.getcwd()}\\DNN_params.yml') as file:
     conf = yaml.load(file, Loader=yaml.FullLoader)
 
-city_name_MW = 'PJME_MW'
+city_name_MW = 'EKPC_MW'
 
 # Reading the data from csv. The dataframe will contain one column per column in the csv
 df = pd.read_csv('input/' + str(city_name_MW)+'.csv')
@@ -62,10 +62,10 @@ deep_learner = ModelLSTM(
     estimate_based_on = conf.get('estimate_based_on'),
     LSTM_layer_depth = conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
-    # scaler = MinMax(feature_range = (0, 1)),
     epochs = conf.get('epochs'),
     validation_split = conf.get('validation_split'), # The share of data that will be used for validation
-    test_split = conf.get('test_split')
+    test_split = conf.get('test_split'),
+    scaler = MinMax(feature_range = (0, 1))
 )
 
 # Fitting the model 
@@ -91,31 +91,21 @@ yhat, error = deep_learner.validate(return_metrics = True)
 if len(yhat) > 0:
 
     # Constructing the forecast dataframe
-    validation = deep_learner.Y_validate
     fig1 = plt.figure(figsize=(15, 10))
     ax1 = fig1.add_subplot(111)
-    plt.plot(validation)
-    plt.plot(yhat)
+    validation, validation_index  = deep_learner.Y_validate
+    fc = df.iloc[ validation_index : validation_index + len(validation),: ].copy() # copying the relevant section from the data
+    fc.reset_index(inplace=True) # When we reset the index, the old index is added as a column, and a new sequential index is used
+    fc['validation'] = yhat #creating a new forecast column
 
-    # TODO Add the time index to the plot knowing the validation data range in the original timeseries
-
-
-    # fc = df.tail(len(yhat)).copy() # copying the last yhat rows from the data
-    # fc.reset_index(inplace=True) # When we reset the index, the old index is added as a column, and a new sequential index is used
-    # fc['forecast'] = yhat #creating a new forecast column
-
-    # # Ploting the forecasts
-
-    # plt.figure(figsize=(12, 8))
-    # for dtype in [city_name_MW, 'forecast']:
-    #     # the dataframe in fc has the column named Datetime used as x axis in plot
-    #     # it also has the columns city_name and forecast used as y axis
-    #     plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
-
-
+    # Ploting the forecasts
+    for dtype in [city_name_MW, 'validation']:
+        # the dataframe in fc has the column named Datetime used as x axis in plot
+        # it also has the columns city_name and forecast used as y axis
+        plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
 
     plt.title('Validation set forecast')  
-    plt.text(0.5, 0.95, 'Error %:'  + str(error*100) , horizontalalignment='center', verticalalignment='center',transform = ax1.transAxes)
+    plt.text(0.5, 0.95, 'RMSE Error :'  + str( np.round(error, decimals=3) ) , horizontalalignment='center', verticalalignment='center',transform = ax1.transAxes)
     plt.legend()
     plt.grid()
     plt.draw()
@@ -143,7 +133,7 @@ if len(yhat) > 0:
         plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
 
     plt.title("Test set forecast")    
-    plt.text(0.5, 0.95, 'Error %:'  + str(error*100) , horizontalalignment='center', verticalalignment='center',transform = ax2.transAxes)
+    plt.text(0.5, 0.95, 'RMSE Error :'  + str( np.round(error, decimals=3) ) , horizontalalignment='center', verticalalignment='center',transform = ax2.transAxes)
     plt.legend()
     plt.grid()
     plt.show()  
