@@ -48,7 +48,10 @@ def rmse(y_true, y_pred):
 def timeseries_diff (timeseries,interval=1):
     """
     A method to remove a possible linear trend in the data by differentiation. 
-    Can be called repeatedly for quadratic, cubic trend, etc.
+    Can be called repeatedly in case a difference order quadratic, cubic, etc is required.
+    For time series with a seasonal component, the lag may be expected to be the period (width) of the seasonality
+    TODO be able to specify the order or number of times to perform the differencing operation
+    See series.diff()
     """
 
     diff = list()
