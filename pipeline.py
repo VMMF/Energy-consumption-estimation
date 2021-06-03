@@ -14,6 +14,10 @@ from model_lstm import ModelLSTM
 # Data preprocessing
 from min_max_scaler import MinMax
 
+#error calculating tools
+from rmse_error_calc import RmseCalc
+from mape_error_calc import MapeCalc
+
 # Reading the neural network parameters configuration file
 import yaml
 
@@ -55,6 +59,8 @@ plt.draw()
 plt.pause(0.01) #avoid blocking thread while displaying image
 #TODO plot in another thread
 
+an_error_calculator = RmseCalc() #MapeCalc() #RmseCalc()
+
 # Initiating the class 
 deep_learner = ModelLSTM(
     data=df, 
@@ -65,7 +71,8 @@ deep_learner = ModelLSTM(
     epochs = conf.get('epochs'),
     validation_split = conf.get('validation_split'), # The share of data that will be used for validation
     test_split = conf.get('test_split'),
-    scaler = MinMax(feature_range = (0, 1))
+    scaler = MinMax(feature_range = (-1, 1)),
+    error_calculator = an_error_calculator
 )
 
 # Fitting the model 
@@ -74,9 +81,9 @@ history = deep_learner.train(return_metrics = True)
 
 if(len(history.epoch)>1):
     plt.figure()
-    plt.plot(history.history['loss'], label = 'rmse_train')
+    plt.plot(history.history['loss'], label = str(an_error_calculator) + '_train')
     if 'val_loss' in history.history:
-        plt.plot(history.history['val_loss'], label = 'rmse_validation')
+        plt.plot(history.history['val_loss'], label = str(an_error_calculator) + '_validation')
     plt.legend()
     plt.title("Cost function")  
     plt.draw()
@@ -105,7 +112,7 @@ if len(yhat) > 0:
         plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
 
     plt.title('Validation set forecast')  
-    plt.text(0.5, 0.95, 'RMSE Error :'  + str( np.round(error, decimals=3) ) , horizontalalignment='center', verticalalignment='center',transform = ax1.transAxes)
+    plt.text(0.5, 0.95, str(an_error_calculator) + ' Error :'  + str( np.round(error, decimals=3) ) , horizontalalignment='center', verticalalignment='center',transform = ax1.transAxes)
     plt.legend()
     plt.grid()
     plt.draw()
@@ -133,7 +140,7 @@ if len(yhat) > 0:
         plt.plot('Datetime', dtype, data=fc, label=dtype, alpha=0.8 )
 
     plt.title("Test set forecast")    
-    plt.text(0.5, 0.95, 'RMSE Error :'  + str( np.round(error, decimals=3) ) , horizontalalignment='center', verticalalignment='center',transform = ax2.transAxes)
+    plt.text(0.5, 0.95, str(an_error_calculator) + ' Error :'  + str( np.round(error, decimals=3) ) , horizontalalignment='center', verticalalignment='center',transform = ax2.transAxes)
     plt.legend()
     plt.grid()
     plt.show()  

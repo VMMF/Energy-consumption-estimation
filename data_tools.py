@@ -2,9 +2,8 @@
 import numpy as np
 
 # Data preprocessing
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.exceptions import NotFittedError
-from keras import backend as K
+
+
 
 
 
@@ -32,15 +31,6 @@ def timeseries_to_XY(samples: list, buffer: int) -> tuple:
     return x, y    
 
 
-def rmse(y_true, y_pred):
-    """
-    A method to calculate root mean square error. (RMSE) punishes large errors 
-    and results in a score that is in the same units as the forecast data,
-    TODO test rmse = sqrt(mean_squared_error(test, predictions))
-    https://www.kaggle.com/learn-forum/52081
-    """
-    
-    return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
 
 #TODO check if timeseries is stationary, otherwise detrend    

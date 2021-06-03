@@ -4,6 +4,7 @@ The aim of this project is to forecast the energy consumption based on pre-exist
 
 It will use a short-term memory (LSTM) deep learning network
 https://towardsdatascience.com/illustrated-guide-to-lstms-and-gru-s-a-step-by-step-explanation-44e9eb85bf21
+https://colah.github.io/posts/2015-08-Understanding-LSTMs/
 
 # Key concepts of LSTM:
 They are a special case of Recurrent Neural Networks (RNN) usel to model sequence data, for instance on speech recognition, speech synthesis, text generation, video caption generation, etc 

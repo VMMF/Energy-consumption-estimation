@@ -9,6 +9,10 @@ from keras.layers import LSTM, Dense
 #scaler tools
 from abstract_scaler import AbstractScaler
 
+#error calculating tools
+from abstract_error_calc import AbstractErrorCalc
+from rmse_error_calc import RmseCalc
+
 from data_tools import *
 
 
@@ -18,7 +22,8 @@ class ModelLSTM(object):
     Should inherit from a abstract model class
     """
 
-    def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10, batch_size=256,validation_split = 0,test_split = 0, scaler: AbstractScaler = None ): 
+    def __init__(self,data: pd.DataFrame, Y_var: str,estimate_based_on: int, LSTM_layer_depth: int, epochs=10,
+        batch_size=256,validation_split = 0,test_split = 0, scaler: AbstractScaler = None, error_calculator: AbstractErrorCalc = RmseCalc() ): 
         
         self.estimate_based_on = estimate_based_on 
         self.LSTM_layer_depth = LSTM_layer_depth
@@ -28,6 +33,7 @@ class ModelLSTM(object):
         self.test_split = test_split
 
         self.scaler = scaler
+        self.error_calculator = error_calculator
 
         self.time_series = data[Y_var].tolist() # Extracting the main variable we want to model/forecast
         X_train, Y_train, X_validate, Y_validate, index_validate, X_test, Y_test,index_test = self.create_data_for_model(self.time_series)
@@ -135,13 +141,15 @@ class ModelLSTM(object):
         """
         # Defining the model
         model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
+
         #TODO do not hardcode activation='relu'
-        model.add(LSTM(self.LSTM_layer_depth, activation='relu', input_shape=(self.estimate_based_on, 1)))
+        # activation is for cell state and hidden state
+        # recurrent_activation is for activate forget,input,output gates
+        model.add(LSTM(self.LSTM_layer_depth, input_shape=(self.estimate_based_on, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
         
-        loss_function = rmse # TODO test mape and also update on __validate_or_test
         # acc and val_acc are only for classification
-        model.compile(optimizer='adam', loss = loss_function )
+        model.compile(optimizer='adam', loss = self.error_calculator.calc_error )
         # model.compile(optimizer='adam', loss= rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
         # Saving the model to the class 
@@ -183,7 +191,7 @@ class ModelLSTM(object):
         """
         A method to predict the validation set used in creating the model
         """
-        yhat = []
+
         x = []
         y = []
         check_split = None
@@ -200,7 +208,6 @@ class ModelLSTM(object):
         """
         A method to predict the validation set used in creating the model
         """
-        yhat = []
 
         x = self._X_test
         y = self._Y_test
@@ -215,15 +222,15 @@ class ModelLSTM(object):
         Optionally return the prediction error of normalized data
         """
                 
-
         if(check_split > 0):
             # Making the prediction list 
             # TODO review self.model(X_validate,training=False)
             yhat = [y[0] for y in self.model.predict(x)] 
+            yhat = np.asarray(yhat, dtype=np.float32)
 
 
         if return_metrics:
-            error = rmse(y,yhat)
+            error = self.error_calculator.calc_error(y,yhat)
             if self.scaler is not None and self.scaler.is_fit:
                 yhat = self.scaler.work(yhat, FWD = False)
             return yhat, error.numpy()
