@@ -65,7 +65,7 @@ an_error_calculator = RmseCalc() #MapeCalc() #RmseCalc()
 deep_learner = ModelLSTM(
     data=df, 
     Y_var= city_name_MW,
-    estimate_based_on = conf.get('estimate_based_on'),
+    estimate_based_on = conf.get('estimate_based_on'), # max 200 to 400
     LSTM_layer_depth = conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'),
     epochs = conf.get('epochs'),
@@ -154,6 +154,8 @@ if len(yhat) > 0:
 
 
 # # Forecasting n steps ahead   
+#TODO implement rolling forecast
+# https://machinelearningmastery.com/multi-step-time-series-forecasting-long-short-term-memory-networks-python/
 
 # # Creating a new model without validation set (full data) and forecasting n steps ahead
 # #TODO use previously trained model

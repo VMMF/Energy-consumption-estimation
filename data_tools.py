@@ -26,6 +26,7 @@ def timeseries_to_XY(samples: list, buffer: int) -> tuple:
     x, y = np.array(x), np.array(y)
 
     # Reshaping the X array to be compatible with model.predict()
+    # The LSTM needs data with the format of [samples, time steps and features].
     x = np.reshape(x, (x.shape[0], x.shape[1], 1))
 
     return x, y    
