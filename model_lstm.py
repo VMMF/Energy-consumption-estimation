@@ -145,7 +145,13 @@ class ModelLSTM(object):
         #TODO do not hardcode activation='relu'
         # activation is for cell state and hidden state
         # recurrent_activation is for activate forget,input,output gates
-        model.add(LSTM(self.LSTM_layer_depth, input_shape=(self.estimate_based_on, 1)))
+        an_activation = 'relu'
+        if self.scaler is not None and self.scaler.is_fit:
+            if self.scaler.feature_range == (-1,1):
+                an_activation = 'tanh'
+            elif self.scaler.feature_range == (0,1):
+                an_activation = 'sigmoid'
+        model.add(LSTM(self.LSTM_layer_depth, activation = an_activation, input_shape=(self.estimate_based_on, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
         
         # acc and val_acc are only for classification

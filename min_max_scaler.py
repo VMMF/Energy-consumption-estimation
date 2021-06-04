@@ -8,9 +8,7 @@ import numpy as np
 class MinMax (AbstractScaler):
 
     def __init__(self, feature_range = (0, 1) ) -> None:
-        super().__init__()
-        self.scaler = MinMaxScaler(feature_range) 
-        self.is_fit = False
+        super().__init__(feature_range,MinMaxScaler(feature_range) )
 
 
     def learn(self,timeseries: list) -> None:
