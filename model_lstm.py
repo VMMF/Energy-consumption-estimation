@@ -142,16 +142,19 @@ class ModelLSTM(object):
         # Defining the model
         model = Sequential() #We create a Sequential model and add layers one at a time until we are happy with our network architecture.
 
-        #TODO do not hardcode activation='relu'
+
         # activation is for cell state and hidden state
         # recurrent_activation is for activate forget,input,output gates
-        an_activation = 'relu'
+        an_activation = 'relu' # if scaler (data) is not fit using relu is better to train
+        a_weights_initializer = 'glorot_uniform' # tf.keras.initializers.HeNormal
         if self.scaler is not None and self.scaler.is_fit:
             if self.scaler.feature_range == (-1,1):
                 an_activation = 'tanh'
+                a_weights_initializer = 'glorot_uniform'
             elif self.scaler.feature_range == (0,1):
                 an_activation = 'sigmoid'
-        model.add(LSTM(self.LSTM_layer_depth, activation = an_activation, input_shape=(self.estimate_based_on, 1)))
+                a_weights_initializer = 'glorot_uniform'
+        model.add(LSTM(self.LSTM_layer_depth, activation = an_activation, kernel_initializer = a_weights_initializer, input_shape=(self.estimate_based_on, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
         
         # acc and val_acc are only for classification
