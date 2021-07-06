@@ -5,6 +5,7 @@ import numpy as np
 # Deep learning: 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
+from keras import optimizers
 
 #scaler tools
 from abstract_scaler import AbstractScaler
@@ -157,8 +158,11 @@ class ModelLSTM(object):
         model.add(LSTM(self.LSTM_layer_depth, activation = an_activation, kernel_initializer = a_weights_initializer, input_shape=(self.estimate_based_on, 1)))
         model.add(Dense(1)) # fully-connected network structure, using linear activation (Regression Problem)
         
+        
+        opt = optimizers.Adam(learning_rate=0.001)
+        #TODO experiment with learning rate decay and different learning_rate
         # acc and val_acc are only for classification
-        model.compile(optimizer='adam', loss = self.error_calculator.calc_error )
+        model.compile(optimizer= opt, loss = self.error_calculator.calc_error )
         # model.compile(optimizer='adam', loss= rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
  
         # Saving the model to the class 
