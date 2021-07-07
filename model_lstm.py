@@ -160,7 +160,7 @@ class ModelLSTM(object):
         
         
         opt = optimizers.Adam(learning_rate=0.001)
-        #TODO experiment with learning rate decay and different learning_rate
+        #TODO experiment with learning rate decay and different learning_rate (in log scale)
         # acc and val_acc are only for classification
         model.compile(optimizer= opt, loss = self.error_calculator.calc_error )
         # model.compile(optimizer='adam', loss= rmse ) # efficient stochastic gradient descent algorithm and mean squared error for a regression problem
