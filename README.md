@@ -27,52 +27,63 @@ The output gate regulates what information (from incoming current input + previo
 
 
 
-Project developped in VS Code 1.56.1 and Windows 10 20H2
+Project developped in VS Code 1.63.2 and Windows 10.0.19043
 # Activating the virtual environment
 
 To avoid conflicts between dependencies it is recommended to use anaconda or miniconda
 
 - Download miniconda :
-https://docs.conda.io/en/latest/miniconda.html . I'm using version 3.8 64 bit
-Note: Version 3.9 of Python is not currently supported by Tensorflow 2.4.1. Do not use 32 bit version of miniconda. Tensorflow is only compatible with python 64 bit
+Note: Do not use 32 bit version of miniconda. Tensorflow is only compatible with python 64 bit
+https://docs.conda.io/en/latest/miniconda.html . I'm using version 4.10.3 with Python 3.9.5
+
 
 - Install it. 
 Note: https://stackoverflow.com/questions/44515769/conda-is-not-recognized-as-internal-or-external-command/51996934#51996934
 I added to the path the following to be able to work with VS code:
-C:\Users\Dell\miniconda3\Library\bin
-C:\Users\Dell\miniconda3\Scripts
-C:\Users\Dell\miniconda3\condabin
+C:\Users\WhateverYourUseris\miniconda3\Library\bin
+C:\Users\WhateverYourUseris\miniconda3\Scripts
+C:\Users\WhateverYourUseris\miniconda3\condabin
 
-To be able to detect Python 3.8.5 in CMD I removed previous Python version from path and added to the system variables path:
-C:\Users\Dell\miniconda3
+Note: WhateverYourUseris in path needs to be replaced by the actual user name
+
+To be able to detect Python 3.9.5 in CMD I removed previous Python version from path and added to the system variables path:
+C:\Users\WhateverYourUseris\miniconda3
 
 - Install GPU processing tools (optional)
 Note: https://www.tensorflow.org/install/gpu
 
--Create a virtual environment in miniconda (similar to pipenv)
-```
-conda create python=3.8 --name deep-ts
-```
+-Go to the root directory of the project and create a virtual environment, for instance with name series_forecast
 
-Activate a virtual environment that we will call series-forecast:
-```
-conda activate series-forecast
-or
-CALL conda.bat activate series-forecast
-```
+pip install pipenv
+python -m venv series_forecast
 
-In VS Code select the Python interpreter inside the conda virtual environment as opposed to the local Python version (possibly not installed through conda)
-Command: Ctrl+Shift+P
-         Python: Select interpreter
-Note: https://code.visualstudio.com/docs/python/environments
-Verify that the VS Code settigs.json contains the following ""python.pythonPath": "C:\\Users\\WhateverYourUseris\\miniconda3\\envs\\deep-ts\\python.exe""
+Note : A folder named series_forecast will be created inside your project folder
+
+VS Code will show a prompt (We noticed a new virtual environment has been created. Do you want to select it for the workspace folder?) . Accept yes .
+
+Note: from this point on all the dependencies to be added will be installed inside the virtual environment we have just created
+
+- Activate the virtual environment
+
+cd series_forecast/Scripts
+activate
+
+Note: You will see how in the console (series_forecast) will appear in front of the path.
+
+Go back to the project folder with cd.. (twice) 
+
+In VS Code select the Python interpreter inside the virtual environment:
+
+Ctrl+Shift+P 
+Python: Select interpreter
 
 Install all the packages from the **dependency_versions.txt** file to the virtual environment:
+
 ```
+python.exe -m pip install --upgrade pip
 pip install -r dependency_versions.txt
 ```
-It will take a while and install many dependencies 
-
+Note : It will take a while and install many dependencies, fortunately some of them have already been installed in miniconda 
 
 After this process is finished run pipeline.py
 

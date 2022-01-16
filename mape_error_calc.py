@@ -1,7 +1,7 @@
 from abstract_error_calc import AbstractErrorCalc
 import numpy as np
 import tensorflow as tf
-from keras import backend as K
+from tensorflow.keras import backend as K
 
 class MapeCalc(AbstractErrorCalc):
 

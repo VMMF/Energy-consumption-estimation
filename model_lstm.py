@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 
 # Deep learning: 
-from keras.models import Sequential
-from keras.layers import LSTM, Dense
-from keras import optimizers
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras import optimizers
 
 #scaler tools
 from abstract_scaler import AbstractScaler
