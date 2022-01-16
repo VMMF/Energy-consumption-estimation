@@ -54,8 +54,10 @@ Note: https://www.tensorflow.org/install/gpu
 
 -Go to the root directory of the project and create a virtual environment, for instance with name series_forecast
 
+```
 pip install pipenv
 python -m venv series_forecast
+```
 
 Note : A folder named series_forecast will be created inside your project folder
 
