@@ -186,7 +186,7 @@ class ModelLSTM(object):
             'batch_size': self.batch_size,
             'epochs': self.epochs,
             'verbose': 2, # Decreasing verbosity level (0,2,1) accelerates training speed
-            'shuffle': False #Don't shuffle the training data before each epoch (bad for )
+            'shuffle': False #Don't shuffle the training data before each epoch
         }
 
         if self.validation_split > 0:

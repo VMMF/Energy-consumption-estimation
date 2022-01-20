@@ -19,8 +19,8 @@ def timeseries_to_XY(samples: list, buffer: int) -> tuple:
         x.append(samples) # if not enough samples for the lag, use all the ones you have
     else:
         for i in range(len(samples) - buffer):
-            y.append(samples[i + buffer]) #start filling after the 1st lag samples. Y is [len(ts) - lag] x 1
-            x.append(samples[i:(i + buffer)]) # fill buffers of lag samples. X is [len(ts) - lag] x lag
+            y.append(samples[i + buffer]) #start filling after the 1st buffer samples. Y is [len(samples) - buffer] x 1
+            x.append(samples[i:(i + buffer)]) # fill buffers of buffer samples. X is [len(samples) - buffer] x buffer
 
     # each Y sample will have an X buffer of size "previous lag samples" associated to it
     x, y = np.array(x), np.array(y)

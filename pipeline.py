@@ -40,7 +40,7 @@ df['Datetime'] = [datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in df['Datetim
 #replacig any NA value with 0
 df[city_name_MW].fillna(0, inplace=True)
 
-# Averaging MW of possible duplicates in Datetime column, not using Datetime columns as new index, keeping 1,2,3...
+# Averaging consumed MW (under city_name_MW colum) for possible duplicates entries in Datetime column, not using Datetime columns as new index, keeping 1,2,3...
 df = df.groupby('Datetime', as_index=False)[city_name_MW].mean()
 
 #TODO analyse and transform (if required) time series to stationary
@@ -59,13 +59,14 @@ plt.draw()
 plt.pause(0.01) #avoid blocking thread while displaying image
 #TODO plot in another thread
 
+#choosing a metric for the error calculation
 an_error_calculator = RmseCalc() #MapeCalc() #RmseCalc()
 
 # Initiating the class 
 deep_learner = ModelLSTM(
     data=df, 
     Y_var= city_name_MW,
-    estimate_based_on = conf.get('estimate_based_on'), # max 200 to 400
+    estimate_based_on = conf.get('estimate_based_on'), # number of previous samples to use to estimate current sample
     LSTM_layer_depth = conf.get('LSTM_layer_depth'),
     batch_size = conf.get('batch_size'), # TODO make sure Batch size fits in CPU cache memory
     epochs = conf.get('epochs'),
